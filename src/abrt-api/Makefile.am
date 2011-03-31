@@ -6,20 +6,18 @@ abrt_api_SOURCES = \
 abrt_api_CPPFLAGS = \
     -I$(srcdir)/../include/report -I$(srcdir)/../include \
     -I$(srcdir)/../lib \
-    -DVAR_RUN=\"$(VAR_RUN)\" \
-    -DDEBUG_DUMPS_DIR=\"$(DEBUG_DUMPS_DIR)\" \
-    -DPLUGINS_CONF_DIR=\"$(PLUGINS_CONF_DIR)\" \
-    $(ENABLE_SOCKET_OR_DBUS) \
-    $(DBUS_CFLAGS) $(GLIB_CFLAGS) \
+    $(GLIB_CFLAGS) \
     -D_GNU_SOURCE \
     -Wall -Wwrite-strings -Werror
 #    $(GTK_CFLAGS)
 abrt_api_LDADD = \
     ../lib/libreport.la \
-    ../lib/libabrt_dbus.la \
-    $(GLIB_LIBS)
+    $(GLIB_LIBS) \
+    -lglib-2.0 \
+    -lssl \
+    -lcrypto
 
-man_MANS = abrt-api.1
+#man_MANS = abrt-api.1
 #EXTRA_DIST = $(man_MANS)
 
 #completiondir = $(sysconfdir)/bash_completion.d
