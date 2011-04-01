@@ -1,8 +1,6 @@
 #ifndef ABRTAPI_H
 #define ABRTAPI_H
 
-#include "abrtlib.h"
-
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
@@ -25,6 +23,9 @@
 //#include <libxml2/libxml/parser.h>
 //#include <gio/gio.h>
 
+#include "abrtlib.h"
+#include "http.h"
+
 /* should be in makefile */
 #define CONFIG_PATH "api.conf"
 #define BACKLOG 10
@@ -45,17 +46,6 @@
 #define OPT_IP  (1U<<4) //use network socket
 #define OPT_PORT (1U<<5) //port was set
 #define OPT_SSL (1U<<6) //use ssl
-
-enum http_method {
-    GET, HEAD, POST, PUT, DELETE
-};
-
-struct http_req {
-    enum http_method method;
-    gchar *uri;
-    GList *options;
-    gchar *body;    
-};
 
 /* initialize "classic" socket */
 int init_n_socket(char* address, char* port);

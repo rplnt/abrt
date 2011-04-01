@@ -15,7 +15,8 @@ abrt_api_LDADD = \
     $(GLIB_LIBS) \
     -lglib-2.0 \
     -lssl \
-    -lcrypto
+    -lcrypto \
+    -lxml2
 
 #man_MANS = abrt-api.1
 #EXTRA_DIST = $(man_MANS)
