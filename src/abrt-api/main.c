@@ -13,6 +13,16 @@ int main(int argc, char **argv)
     SSL_CTX *ctx;
     struct sigaction sa;
 
+    struct option longopts[] = {
+        /* name,            has_arg,         flag, val */
+        { "help",           no_argument,        0, '?' },
+        { "address",        required_argument,  0, 'a' },
+        { "config-file",    required_argument,  0, 'x' },
+        { "debug",          no_argument,        0, 'd' },
+        { "ssl",            required_argument,  0, 'e' },
+        { 0, 0, 0, 0 }
+    };
+
   
     /* parse command line options */
     while (1) {
@@ -27,15 +37,14 @@ int main(int argc, char **argv)
                 flags |= OPT_SSL;
             case 'a':
                 if ( flags & OPT_ADDR ) {
-                    fprintf(stderr,"only one connection atm\n");
-                    exit(19);
+                    error_msg_and_die("Only one connection type of connection is allowed.\n");
                 }                
                 //call function to check string - socket/ip/port etc
                 flags |= parse_addr_input(optarg, listen_addr, port);
                 break;
             case 'x':
                 if ( strlen(optarg) > 99 ) {
-                    fprintf(stderr,"err: Invalid parameter: config-file\n");
+                    error_msg_and_die("Path to config file is too long.\n");
                 }
                 strcpy(config_path, optarg);
                 flags |= OPT_CFG;
@@ -44,14 +53,10 @@ int main(int argc, char **argv)
                 flags |= OPT_DBG;
                 break;
             default: /* case: '?' */
-                usage_and_exit(6);
+                usage_and_exit();
         }
     }
 
-//     if ( flags & OPT_ADDR && flags & OPT_SSL ) {
-//         fprintf(stderr,"Only one listening socket is supported at the moment.\n");
-//         usage_and_exit(20);
-//     }
 
     /* check and supply other settings */
     if ( flags & OPT_CFG ) {
@@ -80,19 +85,19 @@ int main(int argc, char **argv)
         if ( SSL_CTX_use_certificate_file(ctx, CERT_FILE, SSL_FILETYPE_PEM) <= 0 ||
             SSL_CTX_use_PrivateKey_file(ctx, KEY_FILE, SSL_FILETYPE_PEM) <= 0 ) {
             ERR_print_errors_fp(stderr);
-            exit(88);
+            error_msg_and_die("SSL certificates err\n");
         }
         if ( !SSL_CTX_check_private_key(ctx) ) {
-            fprintf(stderr,"err: SSL: check key fail\n");
-            exit(32);
+            error_msg_and_die("Private key does not match public key\n");
         }
+    } else {
+        ctx = NULL;
     }
 
 
     /* listen */
     if ( listen(sockfd, BACKLOG) < 0 ) {
-        fprintf(stderr,"err: %s\n",strerror(errno));
-        exit(8);
+        perror_msg_and_die("Listen failed\n");
     }
 
     /* daemonize */
@@ -103,15 +108,12 @@ int main(int argc, char **argv)
             close(0); //stdin
             close(1); //stdout
             close(2); //stderr
-            if ( setsid() == -1 ) {
-                fprintf(stderr,"daemon err 2\n");
-            }
-            //syslog
-        } else if ( pid == -1 ){
-            fprintf(stderr,"daemon err\n");
-            exit(1);
+            setsid();
+            //syslog TODO
+        } else if ( pid == -1 ) {
+            perror_msg_and_die("Failed to daemonize\n");
         } else {
-            exit(0);
+            exit(0); //parent's successful exit
         }
     }
 
@@ -121,8 +123,7 @@ int main(int argc, char **argv)
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     if ( sigaction(SIGCHLD, &sa, NULL) == -1 ) {
-        fprintf(stderr,"err: sigaction fail\n");
-        exit(9);
+        error_msg_and_die("Sigaction fail\n");
     }
     //TODO handle more interrupts (close sockets, ...) ?
     
@@ -133,12 +134,14 @@ int main(int argc, char **argv)
         int sock_size = sizeof(struct sockaddr);
         SSL *ssl;
         
-        sockfd_in = accept(sockfd, (struct sockaddr*)&sock_in, &sock_size);
+        sockfd_in = accept(sockfd, (struct sockaddr*)&sock_in, (socklen_t*)&sock_size);
         if ( sockfd_in < 0 ) {
-            fprintf(stderr,"err: %s\n",strerror(errno));
-            exit(10);
+            //TODO handle errors appropriately - man 2 accept -> Error Handling
+            // jump?
+            perror_msg_and_die("Accept failed\n");
         }
-        //log according to sock_in family ?
+        
+        //TODO log according to sock_in family?
         fprintf(stderr,"Connection from %s:%d\n",
                inet_ntoa(((struct sockaddr_in*)&sock_in)->sin_addr),
                ntohs(((struct sockaddr_in*)&sock_in)->sin_port ));
@@ -148,8 +151,7 @@ int main(int argc, char **argv)
         /* decide if we're forked process */
         if ( pid == 0 ) {
             if ( close(sockfd) < 0 ) {
-                fprintf(stderr,"err: %s\n",strerror(errno));
-                exit(11);
+                //log errno
             }
 
             if ( flags & OPT_SSL ) {
@@ -162,13 +164,13 @@ int main(int argc, char **argv)
             }
 
             close(sockfd_in);
+            //TODO log errno
             sleep(1); //debug
             exit(1); //!!!
         }
         //else
         if ( close(sockfd_in) < 0 ) {
-            fprintf(stderr,"err: %s\n",strerror(errno));
-            exit(13);
+            //TODO log errno
         }
         
     }

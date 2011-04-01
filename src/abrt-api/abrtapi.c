@@ -11,31 +11,18 @@ int init_n_socket(char *address, char *port)
     hints.ai_flags     |= AI_CANONNAME;
 
     if ( getaddrinfo(address, port, &hints, &res) != 0 ) {
-        fprintf(stderr, "Couldn't get info for \"%s\" on port \"%s\"\n",address,port);
-        exit(200);
+        error_msg_and_die("Couldn't get info for connection from \
+                            \"%s\" on port \"%s\"\n",address,port);
     }
 
     /* create socket */
     sockfd = socket(res->ai_family,res->ai_socktype,0);
     if ( sockfd < 0 ) {
-        fprintf(stderr,"err: %s\n",strerror(errno));
-        exit(6);
+        perror_msg_and_die("Creating socket failed\n");
     }
     
-    /* fill in port and bind */
-//     switch ( res->ai_family ) {
-//         case AF_INET:
-//             ((struct sockaddr_in*)res->ai_addr)->sin_port = htons(port);
-//             break;
-//         case AF_INET6:
-//             ((struct sockaddr_in6*)res->ai_addr)->sin6_port = htons(port);
-//             break;
-//         default:
-//             exit(20);
-//     }
     if ( bind(sockfd, (struct sockaddr*)res->ai_addr, res->ai_addrlen) == -1 ) {
-        fprintf(stderr,"err: %s\n",strerror(errno));
-        exit(7);
+        perror_msg_and_die("Bind failed\n");
     }
 
     return sockfd;
@@ -50,8 +37,7 @@ int init_u_socket(char *sock_name)
 
     sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     if ( sockfd < 0 ) {
-        fprintf(stderr,"err: %s\n",strerror(errno));
-        exit(6);
+        perror_msg_and_die("Creating socket failed\n");
     }
 
     /* create named unix socket */
@@ -61,8 +47,7 @@ int init_u_socket(char *sock_name)
     //unlink(u_socket.sun_path);
     len = strlen(u_socket.sun_path) + sizeof(u_socket.sun_family);
     if ( bind(sockfd, (struct sockaddr*)&u_socket,len) == -1 ) {
-        fprintf(stderr,"err: %s\n",strerror(errno));
-        exit(7);
+        perror_msg_and_die("Bind failed\n");
     }
 
     return sockfd;
@@ -89,11 +74,9 @@ SSL_CTX* init_ssl_context(void)
 
 
 /* lala */
-void usage_and_exit(int err)
+void usage_and_exit()
 {
-    fprintf(stderr,"usage\n");
-    
-    exit(err%255);
+    error_msg_and_die("usage");
 }
 
 void sigchld_handler(int sig)
@@ -142,8 +125,8 @@ void serve_ssl(SSL* ssl)
     int err = SSL_read(ssl, buf, sizeof(buf) - 1);
     buf[err] = '\0';
     printf ("Received %d chars:'%s'\n", err, buf);
-    err = SSL_write(ssl, "This message is from the SSL server",
-                    strlen("This message is from the SSL server"));
+    err = SSL_write(ssl, "This message is from the SSL server\n",
+                    strlen("This message is from the SSL server\n"));
     err = SSL_shutdown(ssl);
     
 
