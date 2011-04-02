@@ -86,14 +86,14 @@ void sigchld_handler(int sig)
 
 
 /* use only for opts parsing (as it exits) */
-void safe_strcpy(char* dest, char* src, int max_len)
+bool safe_strcpy(char* dest, char* src, int max_len)
 {
-    if ( strlen(src) >= max_len ) {
+    if ( strlen(src)+1 > max_len ) {
         error_msg_and_die("\'%.8s...\' could not fit into memory\n",src);
     }
-    strcpy(dest,src);
+    strcpy(dest, src);
 
-    return;
+    return 0;
 }
 
 
@@ -101,6 +101,7 @@ void safe_strcpy(char* dest, char* src, int max_len)
 int parse_addr_input(char* input, char* addr, char* port)
 {
     int rt=OPT_ADDR;
+    int len;
 
     // unix path has to be in form of "/*" or "./*"
     if ( input[0]=='/' || input[0]=='.' ) {
@@ -115,13 +116,17 @@ int parse_addr_input(char* input, char* addr, char* port)
             rt |= OPT_IP;
         } else if ( input[0] == '[' ) {
             //[address6]:port
+            len = strcspn(input+1,"]");
             safe_strcpy(port, p+1, PORT_LEN);
-            strncpy(addr, input+1, strspn(input+1,"0123456789abcdef:"));
+            len<INPUT_LEN-1 ? strncpy(addr, input+1, len):
+                error_msg_and_die("\'%.8s...\' could not fit into memory\n",input);
             rt |= OPT_IP|OPT_PORT;
         } else if ( strchr(input, ':') == p ) {
             //address4:port || hostname:port
+            len = strcspn(input,":");
             safe_strcpy(port, p+1, PORT_LEN);
-            strncpy(addr, input, strcspn(input,":"));
+            len<INPUT_LEN-1 ? strncpy(addr, input, len):
+                error_msg_and_die("\'%.8s...\' could not fit into memory\n",input);
             rt |= OPT_IP|OPT_PORT;
         } else {
             //address6
@@ -131,7 +136,7 @@ int parse_addr_input(char* input, char* addr, char* port)
         
     }
 
-if ( rt&OPT_PORT ) error_msg_and_die("%s -- %s",addr,port);
+if ( rt&OPT_PORT ) error_msg_and_die("%s -- %s", addr, port);
 else error_msg_and_die("%s",addr);
 
     return rt;
