@@ -85,6 +85,18 @@ void sigchld_handler(int sig)
 }
 
 
+/* use only for opts parsing (as it exits) */
+void safe_strcpy(char* dest, char* src, int max_len)
+{
+    if ( strlen(src) >= max_len ) {
+        error_msg_and_die("\'%.8s...\' could not fit into memory\n",src);
+    }
+    strcpy(dest,src);
+
+    return;
+}
+
+
 /* function assumes valid input. if it's not, getaddrinfo will fail */
 int parse_addr_input(char* input, char* addr, char* port)
 {
@@ -92,35 +104,35 @@ int parse_addr_input(char* input, char* addr, char* port)
 
     // unix path has to be in form of "/*" or "./*"
     if ( input[0]=='/' || input[0]=='.' ) {
-        strcpy(addr, input);
+        safe_strcpy(addr, input, INPUT_LEN);
         rt |= OPT_SOCK;
     } else {
         //network address
         char *p = strrchr(input, ':');
         if ( p == NULL ) {
             //address4 || hostname
-            strcpy(addr, input);
+            safe_strcpy(addr, input, INPUT_LEN);
             rt |= OPT_IP;
         } else if ( input[0] == '[' ) {
             //[address6]:port
-            strcpy(port, p+1);
+            safe_strcpy(port, p+1, PORT_LEN);
             strncpy(addr, input+1, strspn(input+1,"0123456789abcdef:"));
             rt |= OPT_IP|OPT_PORT;
         } else if ( strchr(input, ':') == p ) {
             //address4:port || hostname:port
-            strcpy(port, p+1);
+            safe_strcpy(port, p+1, PORT_LEN);
             strncpy(addr, input, strcspn(input,":"));
             rt |= OPT_IP|OPT_PORT;
         } else {
             //address6
-            strcpy(addr, input);
+            safe_strcpy(addr, input, INPUT_LEN);
             rt |= OPT_IP;
         }
         
     }
 
 if ( rt&OPT_PORT ) error_msg_and_die("%s -- %s",addr,port);
-else error_msg_and_die("%s -- %s (8008)",addr,port);
+else error_msg_and_die("%s",addr);
 
     return rt;
 }
