@@ -85,21 +85,42 @@ void sigchld_handler(int sig)
 }
 
 
+/* function assumes valid input. if it's not, getaddrinfo will fail */
 int parse_addr_input(char* input, char* addr, char* port)
 {
     int rt=OPT_ADDR;
 
     // unix path has to be in form of "/*" or "./*"
     if ( input[0]=='/' || input[0]=='.' ) {
-        strcpy(addr,input);
+        strcpy(addr, input);
         rt |= OPT_SOCK;
     } else {
-        //ip address
-        strcpy(addr,input);
-        strcpy(port,"8008");
-
-        rt |= OPT_IP;
+        //network address
+        char *p = strrchr(input, ':');
+        if ( p == NULL ) {
+            //address4 || hostname
+            strcpy(addr, input);
+            rt |= OPT_IP;
+        } else if ( input[0] == '[' ) {
+            //[address6]:port
+            strcpy(port, p+1);
+            strncpy(addr, input+1, strspn(input+1,"0123456789abcdef:"));
+            rt |= OPT_IP|OPT_PORT;
+        } else if ( strchr(input, ':') == p ) {
+            //address4:port || hostname:port
+            strcpy(port, p+1);
+            strncpy(addr, input, strcspn(input,":"));
+            rt |= OPT_IP|OPT_PORT;
+        } else {
+            //address6
+            strcpy(addr, input);
+            rt |= OPT_IP;
+        }
+        
     }
+
+if ( rt&OPT_PORT ) error_msg_and_die("%s -- %s",addr,port);
+else error_msg_and_die("%s -- %s (8008)",addr,port);
 
     return rt;
 }
