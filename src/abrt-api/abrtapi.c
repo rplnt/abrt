@@ -142,6 +142,8 @@ int parse_addr_input(char* input, char* addr, char* port)
 }
 
 
+
+/* universal server function */
 void serve(void* sock, int flags)
 {
     int err,i=0;
@@ -150,10 +152,10 @@ void serve(void* sock, int flags)
     GString *mem = g_string_sized_new(READ_BUF);
     
     while (1) {
-        err = flags&OPT_SSL ? read(sock, buffer, READ_BUF-1):
-                              SSL_read(sock, buffer, READ_BUF-1 );
+        err = (flags & OPT_SSL) ? SSL_read(sock, buffer, READ_BUF-1 ):
+                                  read(*(int*)sock, buffer, READ_BUF-1);
         if ( err < 0 ) {
-            //TODO handle errno
+            //TODO handle errno ||  SSL_get_error(ssl,err);
             break;
         }
         buffer[err] = '\0';
@@ -166,8 +168,18 @@ void serve(void* sock, int flags)
     }
     
     printf("%s",mem->str);
-    g_free(mem);    
+    //send this to someone else
+    //"he" will decide if we want to wait on the same socket
+    //or we will die
+    g_free(mem);
+
+    if ( flags & OPT_SSL ) {
+        err = SSL_shutdown(sock);
+        SSL_free(sock);
+    }
+    
 }
+
 
 
 /*
@@ -183,11 +195,13 @@ void servex(int sockfd_in)
     bool ignore_next=FALSE;
     gchar buffer[READ_BUF];
     GString *mem = g_string_sized_new(READ_BUF);
+    printf("well...\n");
 
     while (1) {
         err = read(sockfd_in, buffer, READ_BUF-1);
         if ( err < 0 ) {
-            //TODO handle errno ||  SSL_get_error(ssl,err);
+            //TODO handle errno 
+            printf("gotcha!\n");
             break;
         }
         buffer[err] = '\0';
@@ -197,14 +211,13 @@ void servex(int sockfd_in)
         if ( !ignore_next && (!g_strcmp0(buffer,"\n") || !g_strcmp0(buffer,"\r\n") || i>16 ) ) break;
         ignore_next = (buffer[err-1] != '\n');
         i++;        
-        
     }
 
     printf("%s",mem->str);
     g_free(mem);
-
-    
 }
+
+
 
 void serve_ssl(SSL* ssl)
 {
@@ -226,8 +239,6 @@ void serve_ssl(SSL* ssl)
         if ( !ignore_next && (!g_strcmp0(buffer,"\n") || !g_strcmp0(buffer,"\r\n") || i>16 ) ) break;
         ignore_next = (buffer[err-1] != '\n');
         i++;
-        
-        
     }
 
     printf("%s",mem->str);
@@ -235,5 +246,4 @@ void serve_ssl(SSL* ssl)
 
     err = SSL_shutdown(ssl);
     SSL_free(ssl);
-
 }

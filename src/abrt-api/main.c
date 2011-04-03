@@ -170,10 +170,12 @@ int main(int argc, char **argv)
                 SSL_set_fd(ssl, sockfd_in);
                 SSL_set_accept_state(ssl);
                 if ( SSL_accept(ssl) == 1 ) {
-                    serve_ssl(ssl);
+                    //serve_ssl(ssl);
+                    serve(ssl,flags);
                 }
             } else {
-                servex(sockfd_in);
+                //servex(sockfd_in);
+                serve(&sockfd_in,flags);
             }
 
             close(sockfd_in);
