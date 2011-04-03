@@ -161,15 +161,16 @@ void serve(void* sock, int flags)
         if ( err == 0 ) break;
         buffer[err] = '\0';
         delete_cr(buffer);
-        printf ("Received %d chars.\n", err);
+        printf ("Received %d chars.\n", (int)strlen(buffer));
         g_string_append(mem,buffer);
+
+        if ( !ignore_next && buffer[0] == '\n' ) break;
+        ignore_next = (buffer[strlen(buffer)-1] != '\n');
         
-        if ( !ignore_next && (!g_strcmp0(buffer,"\n") || !g_strcmp0(buffer,"\r\n")) ) break;
-        ignore_next = (buffer[err-1] != '\n');
+
         i++;
     }
 
-    
     
     printf("%s",mem->str);
     //send this to someone else
@@ -187,21 +188,23 @@ void serve(void* sock, int flags)
 /* remove \r */
 void delete_cr(gchar *in)
 {
-    int i=0,n=0;
+    int index_l=0,index_r=0;
     
-    gchar temp[READ_BUF];
+    //gchar temp[READ_BUF];
 
-    while ( in[i] != '\0' ) {
-        if ( in[i] != '\r' ) {
-            temp[n++] = in[i++];
-        } else  {
-            i++;
+    while ( in[index_r] != '\0' ) {
+        if ( in[index_r] != '\r' ) {
+            in[index_l] = in[index_r];
+            index_l++;
         }
+        index_r++;
     }
-    temp[n] = '\0';
+    in[index_l] = '\0';
 
-    strcpy(in,temp);
 }
+
+
+
 
 
 
