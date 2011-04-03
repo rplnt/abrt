@@ -1,14 +1,27 @@
 #include "abrtapi.h"
 
+void test() {
+    const char* input[] = {
+        "localhost",
+        "localhost:1234",
+        "10.0.0.1",
+        "10.0.0.1:1234",
+        "1234:12::1",
+        "[12aa::12aa:1]:1234"
+    };
+    input[0]++;
+    exit(11);
+}
 
 int main(int argc, char **argv)
 {
+    //test();
     int flags=0; //config flags
-    char port[8]; //getaddrinfo accepts "string"
+    char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket
     int sockfd_in; //new connection
-    char listen_addr[100]; //used for both types of sockets
-    char config_path[100];
+    char listen_addr[INPUT_LEN+1]; //used for both types of sockets
+    char config_path[INPUT_LEN+1];
     pid_t pid;
     SSL_CTX *ctx;
     struct sigaction sa;
@@ -28,7 +41,7 @@ int main(int argc, char **argv)
     while (1) {
         int opt;
 
-        if ( (opt=getopt_long(argc, argv, "ua:x:de:?", longopts, NULL)) == -1 ) {
+        if ( (opt=getopt_long(argc, argv, "a:x:de:?", longopts, NULL)) == -1 ) {
             break;
         }
 
@@ -37,16 +50,13 @@ int main(int argc, char **argv)
                 flags |= OPT_SSL;
             case 'a':
                 if ( flags & OPT_ADDR ) {
-                    error_msg_and_die("Only one connection type of connection is allowed.\n");
+                    error_msg_and_die("Only one listening address is allowed.\n");
                 }                
                 //call function to check string - socket/ip/port etc
                 flags |= parse_addr_input(optarg, listen_addr, port);
                 break;
             case 'x':
-                if ( strlen(optarg) > 99 ) {
-                    error_msg_and_die("Path to config file is too long.\n");
-                }
-                strcpy(config_path, optarg);
+                safe_strcpy(config_path, optarg, INPUT_LEN);
                 flags |= OPT_CFG;
                 break;
             case 'd':
