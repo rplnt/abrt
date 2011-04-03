@@ -88,8 +88,8 @@ void sigchld_handler(int sig)
 /* use only for opts parsing (as it exits) */
 bool safe_strcpy(char* dest, char* src, int max_len)
 {
-    if ( strlen(src)+1 > max_len ) {
-        error_msg_and_die("\'%.8s...\' could not fit into memory\n",src);
+    if ( strlen(src) > max_len ) {
+        error_msg_and_die("\"%.8s...\" could not fit into memory\n",src);
     }
     strcpy(dest, src);
 
@@ -103,8 +103,8 @@ int parse_addr_input(char* input, char* addr, char* port)
     int rt=OPT_ADDR;
     int len;
 
-    // unix path has to be in form of "/*" or "./*"
-    if ( input[0]=='/' || input[0]=='.' ) {
+    if ( input[0]=='/' || input[0]=='.' || input[0]=='~' ) {
+        //unix path
         safe_strcpy(addr, input, INPUT_LEN);
         rt |= OPT_SOCK;
     } else {
@@ -118,15 +118,17 @@ int parse_addr_input(char* input, char* addr, char* port)
             //[address6]:port
             len = strcspn(input+1,"]");
             safe_strcpy(port, p+1, PORT_LEN);
-            len<INPUT_LEN-1 ? strncpy(addr, input+1, len):
-                error_msg_and_die("\'%.8s...\' could not fit into memory\n",input);
+            len<INPUT_LEN ? strncpy(addr, input+1, len):
+                error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
+            addr[len] = '\0';
             rt |= OPT_IP|OPT_PORT;
         } else if ( strchr(input, ':') == p ) {
             //address4:port || hostname:port
             len = strcspn(input,":");
             safe_strcpy(port, p+1, PORT_LEN);
-            len<INPUT_LEN-1 ? strncpy(addr, input, len):
-                error_msg_and_die("\'%.8s...\' could not fit into memory\n",input);
+            len<INPUT_LEN ? strncpy(addr, input, len):
+                error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
+            addr[len] = '\0';
             rt |= OPT_IP|OPT_PORT;
         } else {
             //address6
@@ -135,9 +137,6 @@ int parse_addr_input(char* input, char* addr, char* port)
         }
         
     }
-
-if ( rt&OPT_PORT ) error_msg_and_die("%s -- %s", addr, port);
-else error_msg_and_die("%s",addr);
 
     return rt;
 }
