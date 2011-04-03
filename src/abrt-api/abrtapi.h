@@ -26,16 +26,18 @@
 #include "abrtlib.h"
 #include "http.h"
 
-/* should be in makefile */
+/* should be in makefile ? */
 #define CONFIG_PATH "api.conf"
-#define BACKLOG 10
-#define PORT_MIN 1000
-#define MAX_HTTP_OPTS 10
-#define MAX_HTTP_LEN 1000
+#define BACKLOG (10)
+#define PORT_MIN (1000)
+#define MAX_HTTP_OPTS (10)
+#define MAX_HTTP_LEN (1000)
+#define INPUT_LEN (100)
+#define PORT_LEN (20)
 
 /* should be in config file */
-#define CERT_FILE "certs/cacert.pem"
-#define KEY_FILE "certs/privkey.pem"
+#define CERT_FILE "/home/rplnt/projects/certs/cacert.pem"
+#define KEY_FILE "/home/rplnt/projects/certs/privkey.pem"
 
 
 /* option flags TODO */
@@ -67,6 +69,9 @@ void serve(int sockfd_in);
 
 /* serve ssl */
 void serve_ssl(SSL* ssl);
+
+/* copy string with len check */
+bool safe_strcpy(char* dest, char* src, int max_len);
 
 /* fill out port and/or addr and return flags */
 int parse_addr_input(char* input, char* addr, char* port);
