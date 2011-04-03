@@ -35,6 +35,7 @@
 #define INPUT_LEN (100)
 #define PORT_LEN (20)
 #define READ_BUF (16)
+#define MAX_LINES (128)
 
 /* should be in config file */
 #define CERT_FILE "/home/rplnt/projects/certs/cacert.pem"
@@ -79,6 +80,9 @@ bool safe_strcpy(char* dest, char* src, int max_len);
 
 /* fill out port and/or addr and return flags */
 int parse_addr_input(char* input, char* addr, char* port);
+
+/* remove CR characters */
+void delete_cr(gchar* in);
 
 
 
