@@ -34,6 +34,7 @@
 #define MAX_HTTP_LEN (1000)
 #define INPUT_LEN (100)
 #define PORT_LEN (20)
+#define READ_BUF (16)
 
 /* should be in config file */
 #define CERT_FILE "/home/rplnt/projects/certs/cacert.pem"
@@ -64,10 +65,13 @@ void usage_and_exit();
 /* take care of zombies */
 void sigchld_handler(int sig);
 
-/* serve socket */
-void serve(int sockfd_in);
+/* test */
+void serve(void *sock, int flags);
 
-/* serve ssl */
+/* serve socket */
+void servex(int sockfd_in);
+
+/* serve ssl socket */
 void serve_ssl(SSL* ssl);
 
 /* copy string with len check */

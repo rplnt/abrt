@@ -165,12 +165,15 @@ int main(int argc, char **argv)
             }
 
             if ( flags & OPT_SSL ) {
+                //TODO more errors?
                 ssl = SSL_new(ctx);
                 SSL_set_fd(ssl, sockfd_in);
-                SSL_accept(ssl);
-                serve_ssl(ssl);                
+                SSL_set_accept_state(ssl);
+                if ( SSL_accept(ssl) == 1 ) {
+                    serve_ssl(ssl);
+                }
             } else {
-                serve(sockfd_in);
+                servex(sockfd_in);
             }
 
             close(sockfd_in);

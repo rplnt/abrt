@@ -1,3 +1,4 @@
+#include <glib/ghash.h>
 
 enum http_method {
     GET, HEAD, POST, PUT, DELETE
@@ -26,13 +27,13 @@ enum http_response_code {
 struct http_req {
     enum http_method method;
     gchar *uri;
-    GList *options;
+    GHashTable *options;
     gchar *body;
 };
 
 struct http_resp {
     enum http_response_code code;
     struct http_req *request; // could be useful?
-    GList *options;
+    GHashTable *options;
     gchar *body;
 };

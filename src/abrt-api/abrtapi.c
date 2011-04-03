@@ -142,6 +142,33 @@ int parse_addr_input(char* input, char* addr, char* port)
 }
 
 
+void serve(void* sock, int flags)
+{
+    int err,i=0;
+    bool ignore_next=FALSE;
+    gchar buffer[READ_BUF];
+    GString *mem = g_string_sized_new(READ_BUF);
+    
+    while (1) {
+        err = flags&OPT_SSL ? read(sock, buffer, READ_BUF-1):
+                              SSL_read(sock, buffer, READ_BUF-1 );
+        if ( err < 0 ) {
+            //TODO handle errno
+            break;
+        }
+        buffer[err] = '\0';
+        printf ("Received %d chars.\n", err);
+        g_string_append(mem,buffer);
+        
+        if ( !ignore_next && (!g_strcmp0(buffer,"\n") || !g_strcmp0(buffer,"\r\n") || i>16 ) ) break;
+        ignore_next = (buffer[err-1] != '\n');
+        i++;
+    }
+    
+    printf("%s",mem->str);
+    g_free(mem);    
+}
+
 
 /*
  * 1. read request to buffer
@@ -150,21 +177,63 @@ int parse_addr_input(char* input, char* addr, char* port)
  * 4. respond
  * 5. wait and iterate
  */
-void serve(int sockfd_in)
+void servex(int sockfd_in)
 {
-    send(sockfd_in,"Hai",4,0);
-    exit(1);
+    int err, i=0;
+    bool ignore_next=FALSE;
+    gchar buffer[READ_BUF];
+    GString *mem = g_string_sized_new(READ_BUF);
+
+    while (1) {
+        err = read(sockfd_in, buffer, READ_BUF-1);
+        if ( err < 0 ) {
+            //TODO handle errno ||  SSL_get_error(ssl,err);
+            break;
+        }
+        buffer[err] = '\0';
+        printf ("Received %d chars.\n", err);
+        g_string_append(mem,buffer);
+        
+        if ( !ignore_next && (!g_strcmp0(buffer,"\n") || !g_strcmp0(buffer,"\r\n") || i>16 ) ) break;
+        ignore_next = (buffer[err-1] != '\n');
+        i++;        
+        
+    }
+
+    printf("%s",mem->str);
+    g_free(mem);
+
+    
 }
 
 void serve_ssl(SSL* ssl)
 {
-    char buf[100];
-    int err = SSL_read(ssl, buf, sizeof(buf) - 1);
-    buf[err] = '\0';
-    printf ("Received %d chars:'%s'\n", err, buf);
-    err = SSL_write(ssl, "This message is from the SSL server\n",
-                    strlen("This message is from the SSL server\n"));
-    err = SSL_shutdown(ssl);
+    int err,i=0;
+    bool ignore_next=FALSE;
+    gchar buffer[READ_BUF];
+    GString *mem = g_string_sized_new(READ_BUF);
     
+    while (1) {
+        err = SSL_read(ssl, buffer, READ_BUF-1 );
+        if ( err < 0 ) {
+            //TODO handle SSL_get_error(ssl,err);
+            break;
+        }
+        buffer[err] = '\0';
+        printf ("Received %d chars.\n", err);
+        g_string_append(mem,buffer);
+
+        if ( !ignore_next && (!g_strcmp0(buffer,"\n") || !g_strcmp0(buffer,"\r\n") || i>16 ) ) break;
+        ignore_next = (buffer[err-1] != '\n');
+        i++;
+        
+        
+    }
+
+    printf("%s",mem->str);
+    g_free(mem);
+
+    err = SSL_shutdown(ssl);
+    SSL_free(ssl);
 
 }
