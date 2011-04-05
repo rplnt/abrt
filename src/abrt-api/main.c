@@ -1,16 +1,6 @@
 #include "abrtapi.h"
 
 void test() {
-    const char* input[] = {
-        "localhost",
-        "localhost:1234",
-        "10.0.0.1",
-        "10.0.0.1:1234",
-        "1234:12::1",
-        "[12aa::12aa:1]:1234"
-    };
-    input[0]++;
-    exit(11);
 }
 
 int main(int argc, char **argv)
@@ -36,7 +26,7 @@ int main(int argc, char **argv)
         { 0, 0, 0, 0 }
     };
 
-  
+
     /* parse command line options */
     while (1) {
         int opt;
@@ -170,11 +160,17 @@ int main(int argc, char **argv)
                 SSL_set_fd(ssl, sockfd_in);
                 SSL_set_accept_state(ssl);
                 if ( SSL_accept(ssl) == 1 ) {
-                    //serve_ssl(ssl);
+                    //while whatever serve
                     serve(ssl,flags);
+
+                    if ( flags & OPT_SSL ) {
+                        //TODO errors
+                        SSL_shutdown(ssl);
+                        SSL_free(ssl);
+                    }
                 }
             } else {
-                //servex(sockfd_in);
+                //while whatever serve
                 serve(&sockfd_in,flags);
             }
 

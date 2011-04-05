@@ -34,7 +34,7 @@
 #define MAX_HTTP_LEN (1000)
 #define INPUT_LEN (100)
 #define PORT_LEN (20)
-#define READ_BUF (16)
+#define READ_BUF (1000)
 #define MAX_LINES (128)
 
 /* should be in config file */
@@ -50,6 +50,8 @@
 #define OPT_IP  (1U<<4) //use network socket
 #define OPT_PORT (1U<<5) //port was set
 #define OPT_SSL (1U<<6) //use ssl
+
+#define pass (0)
 
 /* initialize "classic" socket */
 int init_n_socket(char* address, char* port);

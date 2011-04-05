@@ -118,16 +118,22 @@ int parse_addr_input(char* input, char* addr, char* port)
             //[address6]:port
             len = strcspn(input+1,"]");
             safe_strcpy(port, p+1, PORT_LEN);
-            len<INPUT_LEN ? strncpy(addr, input+1, len):
+            if ( len<INPUT_LEN ){
+                strncpy(addr, input+1, len);
+            } else {
                 error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
+            }
             addr[len] = '\0';
             rt |= OPT_IP|OPT_PORT;
         } else if ( strchr(input, ':') == p ) {
             //address4:port || hostname:port
             len = strcspn(input,":");
             safe_strcpy(port, p+1, PORT_LEN);
-            len<INPUT_LEN ? strncpy(addr, input, len):
+            if ( len<INPUT_LEN ){
+                strncpy(addr, input, len);
+            } else {
                 error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
+            }
             addr[len] = '\0';
             rt |= OPT_IP|OPT_PORT;
         } else {
@@ -146,13 +152,16 @@ int parse_addr_input(char* input, char* addr, char* port)
 /* universal server function */
 void serve(void* sock, int flags)
 {
-    int err,i=0;
-    bool ignore_next=FALSE;
+    int err, i=0;
+    bool ignore_next=TRUE; //rfc2616 4.1
+    bool head=FALSE;
     gchar buffer[READ_BUF];
-    GString *mem = g_string_sized_new(READ_BUF);
+    GString *headers = g_string_sized_new(READ_BUF);
+    GString *body = NULL;
+    struct http_req request = { UNDEFINED, NULL, NULL, NULL };
     
     while ( i < MAX_LINES ) {
-        err = (flags & OPT_SSL) ? SSL_read(sock, buffer, READ_BUF-1 ):
+        err = (flags & OPT_SSL) ? SSL_read(sock, buffer, READ_BUF-1):
                                   read(*(int*)sock, buffer, READ_BUF-1);
         if ( err < 0 ) {
             //TODO handle errno ||  SSL_get_error(ssl,err);
@@ -160,38 +169,49 @@ void serve(void* sock, int flags)
         }
         if ( err == 0 ) break;
         buffer[err] = '\0';
-        delete_cr(buffer);
+        delete_cr(buffer); //CR should be present, but who cares?
         printf ("Received %d chars.\n", (int)strlen(buffer));
-        g_string_append(mem,buffer);
+        g_string_append(head?body:headers, buffer);
 
-        if ( !ignore_next && buffer[0] == '\n' ) break;
-        ignore_next = (buffer[strlen(buffer)-1] != '\n');
-        
+        /* checking for end of header section - useless? */
+        if ( head == FALSE && !ignore_next && buffer[0] == '\n' ) {
+            parse_head(request, headers);
+            //allocate memory for body or break
+            head = TRUE;
+            g_free(headers);
+        } else if ( HEAD == FALSE ) {
+            ignore_next = (buffer[strlen(buffer)-1] != '\n');
+        } else {
+            //body
+            //stop according to content-length
+        }
 
         i++;
     }
 
-    
-    printf("%s",mem->str);
-    //send this to someone else
-    //"he" will decide if we want to wait on the same socket
-    //or we will die
-    g_free(mem);
 
-    if ( flags & OPT_SSL ) {
-        err = SSL_shutdown(sock);
-        SSL_free(sock);
-    }
+    g_free(headers);
+    g_free(body);
+    //pass http_req, recieve http_resp
+    //send http_resp
+    //return wheter close socket or continue listening
+    //unallocate shitload of memory
     
 }
 
-/* remove \r */
+
+
+void parse_head(struct http_req request, GString* headers)
+{
+    
+}
+
+
+/* remove CR in place */
 void delete_cr(gchar *in)
 {
-    int index_l=0,index_r=0;
+    int index_l=0, index_r=0;
     
-    //gchar temp[READ_BUF];
-
     while ( in[index_r] != '\0' ) {
         if ( in[index_r] != '\r' ) {
             in[index_l] = in[index_r];
@@ -199,8 +219,9 @@ void delete_cr(gchar *in)
         }
         index_r++;
     }
+    
     in[index_l] = '\0';
-
+    
 }
 
 
