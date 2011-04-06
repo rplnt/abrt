@@ -175,11 +175,11 @@ void serve(void* sock, int flags)
 
         /* checking for end of header section - useless? */
         if ( head == FALSE && !ignore_next && buffer[0] == '\n' ) {
-            parse_head(request, headers);
-            //allocate memory for body or break
+            parse_head(&request, headers);
             head = TRUE;
-            g_free(headers);
-        } else if ( HEAD == FALSE ) {
+            //allocate memory for body or break
+            break;
+        } else if ( head == FALSE ) {
             ignore_next = (buffer[strlen(buffer)-1] != '\n');
         } else {
             //body
@@ -201,9 +201,42 @@ void serve(void* sock, int flags)
 
 
 
-void parse_head(struct http_req request, GString* headers)
+
+
+void parse_head(struct http_req* request, GString* headers)
 {
+    gchar *p;
+    gchar **s_head;
+    gchar **s_request = NULL;
+
+//     G_URI_RESERVED_CHARS_ALLOWED_IN_PATH // +/
+//     G_URI_RESERVED_CHARS_ALLOWED_IN_PATH_ELEMENT
+
+    /* rfc2616 4.1 */
+    if ( headers->str[0] == '\n' ) {
+        p = headers->str+1;
+    } else {
+        p = headers->str;
+    }
+
+    /* split by new lines */
+    s_head = g_strsplit(p, "\n", -1);
+
+    /* request line */
+    s_request = g_strsplit_set(s_head[0], " \t",3);
+    request->method = is_valid_method(s_request[0])?hash_method(s_request[0]):UNDEFINED;
+
+    /* rfc2616 something */
+    if ( request->method == UNDEFINED ) {
+        //TODO 
+        /* compatibility with pre-http/1.0 clients allows
+         * to have  at firstline url only and assume GET */
+    }
     
+    
+    g_strfreev(s_head);
+    g_strfreev(s_request);
+
 }
 
 
@@ -224,80 +257,26 @@ void delete_cr(gchar *in)
     
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-/*
- * 1. read request to buffer
- * 2. ssl
- * 3. http
- * 4. respond
- * 5. wait and iterate
- */
-void servex(int sockfd_in)
+/* create hash of http method to store in request */
+int hash_method(gchar *methodstr)
 {
-    int err, i=0;
-    bool ignore_next=FALSE;
-    gchar buffer[READ_BUF];
-    GString *mem = g_string_sized_new(READ_BUF);
-    printf("well...\n");
+    int rt=0;
+    int i=0;
 
-    while (1) {
-        err = read(sockfd_in, buffer, READ_BUF-1);
-        if ( err < 0 ) {
-            //TODO handle errno 
-            printf("gotcha!\n");
-            break;
-        }
-        buffer[err] = '\0';
-        printf ("Received %d chars.\n", err);
-        g_string_append(mem,buffer);
-        
-        if ( !ignore_next && (!g_strcmp0(buffer,"\n") || !g_strcmp0(buffer,"\r\n") || i>16 ) ) break;
-        ignore_next = (buffer[err-1] != '\n');
-        i++;        
-    }
-
-    printf("%s",mem->str);
-    g_free(mem);
-}
-
-
-
-void serve_ssl(SSL* ssl)
-{
-    int err,i=0;
-    bool ignore_next=FALSE;
-    gchar buffer[READ_BUF];
-    GString *mem = g_string_sized_new(READ_BUF);
-    
-    while (1) {
-        err = SSL_read(ssl, buffer, READ_BUF-1 );
-        if ( err < 0 ) {
-            //TODO handle SSL_get_error(ssl,err);
-            break;
-        }
-        buffer[err] = '\0';
-        printf ("Received %d chars.\n", err);
-        g_string_append(mem,buffer);
-
-        if ( !ignore_next && (!g_strcmp0(buffer,"\n") || !g_strcmp0(buffer,"\r\n") || i>16 ) ) break;
-        ignore_next = (buffer[err-1] != '\n');
+    while ( methodstr[i] != '\0' && rt < 1000 ) {
+        rt += (int)g_ascii_tolower(methodstr[i]);
         i++;
     }
 
-    printf("%s",mem->str);
-    g_free(mem);
-
-    err = SSL_shutdown(ssl);
-    SSL_free(ssl);
+    return rt;
 }
+
+/* check if method is valid http method */
+bool is_valid_method(gchar *m)
+{
+    return !(g_ascii_strcasecmp(m,"GET") && g_ascii_strcasecmp(m,"POST") &&
+           g_ascii_strcasecmp(m,"HEAD") && g_ascii_strcasecmp(m,"DELETE") &&
+           g_ascii_strcasecmp(m,"PUT") && g_ascii_strcasecmp(m,"OPTIONS") &&
+           g_ascii_strcasecmp(m,"TRACE") && g_ascii_strcasecmp(m,"CONNECT"));
+}
+

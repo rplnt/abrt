@@ -2,7 +2,15 @@
 
 /* UNDEFINED means that http_req structure wasn't used */
 enum http_method {
-    UNDEFINED, GET, HEAD, POST, PUT, DELETE
+    UNDEFINED   = 0,
+    OPTIONS     = 780,
+    GET         = 320,
+    HEAD        = 402,
+    POST        = 454,
+    PUT         = 345,
+    DELETE      = 627,
+    TRACE       = 527,
+    CONNECT     = 746
 };
 
 enum http_response_code {
@@ -33,6 +41,12 @@ struct http_req {
     GString *body;
 };
 
+/*
+static char allowed_uri_chars[] = "0123456789 \
+                                   abcdefghjijklmnopqrstuvwxyz \
+                                   ;/?:@=#&";
+*/
+
 struct http_resp {
     enum http_response_code code;
     struct http_req *request; // could be useful?
@@ -45,4 +59,8 @@ struct http_resp {
  * set http_method - this indicates that parsing was successfull
  * unallocate memory in case of wrong header
  */
-void parse_head(struct http_req request, GString* headers);
+void parse_head(struct http_req *request, GString* headers);
+
+gchar* strcode(enum http_response_code code);
+
+bool is_valid_method(gchar *methodstr);

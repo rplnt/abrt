@@ -1,6 +1,18 @@
 #include "abrtapi.h"
 
 void test() {
+    printf(" %d\n", hash_method((gchar *)"GET"));
+    printf(" %d\n", hash_method((gchar *)"POST"));
+    printf(" %d\n", hash_method((gchar *)"poSt"));
+    printf(" %d\n", hash_method((gchar *)"PUT"));
+    printf(" %d\n", hash_method((gchar *)"Delete"));
+    printf(" %d\n", hash_method((gchar *)"HEAD"));
+    printf(" %d\n", hash_method((gchar *)"options"));
+    printf(" %d\n", hash_method((gchar *)"TRace"));
+    printf(" %d\n", hash_method((gchar *)"CONNECT"));
+    printf(" %d\n", hash_method((gchar *)"random"));
+
+    exit(2);
 }
 
 int main(int argc, char **argv)

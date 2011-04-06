@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <wait.h>
 #include <glib-2.0/glib.h>
+//#include <glib/gregex.h>
 //#include <libxml2/libxml/parser.h>
 //#include <gio/gio.h>
 
@@ -34,7 +35,7 @@
 #define MAX_HTTP_LEN (1000)
 #define INPUT_LEN (100)
 #define PORT_LEN (20)
-#define READ_BUF (1000)
+#define READ_BUF (13)
 #define MAX_LINES (128)
 
 /* should be in config file */
@@ -85,6 +86,8 @@ int parse_addr_input(char* input, char* addr, char* port);
 
 /* remove CR characters */
 void delete_cr(gchar* in);
+
+int hash_method(gchar *methodstr);
 
 
 
