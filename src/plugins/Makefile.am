@@ -42,12 +42,15 @@ dist_events_DATA = \
     report_RHTSupport.xml \
     report_Kerneloops.xml
 
+@INTLTOOL_XML_RULE@
+
 eventsconfdir = $(EVENTS_CONF_DIR)
 
 dist_eventsconf_DATA = \
     ccpp_events.conf \
     mailx_events.conf \
-    koops_events.conf
+    koops_events.conf \
+    rhtsupport_events.conf
 
 man_MANS = \
     abrt-Bugzilla.7 \
@@ -59,7 +62,17 @@ man_MANS = \
 
 PYTHON_FILES = abrt-action-install-debuginfo.py abrt-action-list-dsos.py
 
-EXTRA_DIST = $(man_MANS) $(PYTHON_FILES)
+EXTRA_DIST = \
+    $(man_MANS) \
+    $(PYTHON_FILES) \
+    report_Bugzilla.xml.in \
+    report_Bugzilla.conf \
+    report_Logger.conf \
+    analyze_LocalGDB.xml.in \
+    analyze_RetraceServer.xml.in \
+    report_Mailx.xml.in \
+    report_RHTSupport.xml.in \
+    report_Kerneloops.xml.in
 
 $(DESTDIR)/$(DEBUG_INFO_DIR):
 	$(mkdir_p) '$@'
