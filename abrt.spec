@@ -223,6 +223,15 @@ Requires: abrt-plugin-bugzilla, abrt-plugin-logger
 This package contains simple command line client for controlling abrt daemon over
 the sockets.
 
+%package http
+Summary: %{name}'s http daemon
+Group: Applications/System
+Requires: %{name} = %{version}-%{release}
+
+%description http
+This package contains simple http server, which can be used to query ABRT's
+problem database
+
 %package desktop
 Summary: Virtual package to install all necessary packages for usage from desktop environment
 Group: User Interface/Desktops
@@ -562,6 +571,10 @@ fi
 
 %files desktop
 %defattr(-,root,root,-)
+
+%files http
+%defattr(-,root,root,-)
+%{_bindir}/abrt-api
 
 %files retrace-server
 %defattr(-,root,root,-)
