@@ -1,18 +1,10 @@
 #include "abrtapi.h"
 
 void test() {
-    printf(" %d\n", hash_method((gchar *)"GET"));
-    printf(" %d\n", hash_method((gchar *)"POST"));
-    printf(" %d\n", hash_method((gchar *)"poSt"));
-    printf(" %d\n", hash_method((gchar *)"PUT"));
-    printf(" %d\n", hash_method((gchar *)"Delete"));
-    printf(" %d\n", hash_method((gchar *)"HEAD"));
-    printf(" %d\n", hash_method((gchar *)"options"));
-    printf(" %d\n", hash_method((gchar *)"TRace"));
-    printf(" %d\n", hash_method((gchar *)"CONNECT"));
-    printf(" %d\n", hash_method((gchar *)"random"));
-
-    exit(2);
+    gchar **lala;
+    lala = g_strsplit("http://name.com/url/this/way?and=fajv&no=yes#title", "/", 4);
+	printf("lala: %s", lala[3]);
+	exit(5);
 }
 
 int main(int argc, char **argv)
@@ -27,7 +19,7 @@ int main(int argc, char **argv)
     pid_t pid;
     SSL_CTX *ctx;
     struct sigaction sa;
-
+	
     struct option longopts[] = {
         /* name,            has_arg,         flag, val */
         { "help",           no_argument,        0, '?' },
@@ -105,7 +97,7 @@ int main(int argc, char **argv)
     } else {
         ctx = NULL;
     }
-
+    
 
     /* listen */
     if ( listen(sockfd, BACKLOG) < 0 ) {
@@ -158,6 +150,7 @@ int main(int argc, char **argv)
                inet_ntoa(((struct sockaddr_in*)&sock_in)->sin_addr),
                ntohs(((struct sockaddr_in*)&sock_in)->sin_port ));
 
+		//gdb: set follow-fork-mode child
         pid = fork();
 
         /* decide if we're forked process */

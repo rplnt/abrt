@@ -1,5 +1,9 @@
 #include "abrtapi.h"
 
+static char allowed_uri_chars[] = "0123456789 \
+                                   abcdefghjijklmnopqrstuvwxyz \
+                                   ;/?:@=#&.";
+
 int init_n_socket(char *address, char *port)
 {
     int sockfd;
@@ -173,7 +177,12 @@ void serve(void* sock, int flags)
         printf ("Received %d chars.\n", (int)strlen(buffer));
         g_string_append(head?body:headers, buffer);
 
-        /* checking for end of header section - useless? */
+        if ( buffer[err-1] != '\n' ) {
+            //line is too long
+            break;
+        }
+
+        /* checking for end of header section */
         if ( head == FALSE && !ignore_next && buffer[0] == '\n' ) {
             parse_head(&request, headers);
             head = TRUE;
@@ -195,7 +204,7 @@ void serve(void* sock, int flags)
     //pass http_req, recieve http_resp
     //send http_resp
     //return wheter close socket or continue listening
-    //unallocate shitload of memory
+    //unallocate !*#**load of memory
     
 }
 
@@ -206,8 +215,10 @@ void serve(void* sock, int flags)
 void parse_head(struct http_req* request, GString* headers)
 {
     gchar *p;
-    gchar **s_head;
-    gchar **s_request = NULL;
+    gchar **s_head      = NULL;
+    gchar **s_request   = NULL;
+    gchar *uri          = NULL;
+    gchar *version      = NULL;
 
 //     G_URI_RESERVED_CHARS_ALLOWED_IN_PATH // +/
 //     G_URI_RESERVED_CHARS_ALLOWED_IN_PATH_ELEMENT
@@ -224,16 +235,43 @@ void parse_head(struct http_req* request, GString* headers)
 
     /* request line */
     s_request = g_strsplit_set(s_head[0], " \t",3);
-    request->method = is_valid_method(s_request[0])?hash_method(s_request[0]):UNDEFINED;
+	if ( g_strv_length(s_request) != 3 ) {
+		goto stop;
+	}
 
-    /* rfc2616 something */
-    if ( request->method == UNDEFINED ) {
-        //TODO 
-        /* compatibility with pre-http/1.0 clients allows
-         * to have  at firstline url only and assume GET */
+    /* request method */
+	request->method = is_valid_method(s_request[0])?hash_method(s_request[0]):UNDEFINED;
+
+    /* get out url */
+    if ( s_request[1][0] != '/' ) {
+        if ( g_uri_parse_scheme(s_request[1]) == NULL ) {
+            goto stop;
+        }
+        //url is in format xxx://hostname/rest .. we want the rest
+        uri = g_strdup( g_strsplit(s_request[1],"/",4)[3] );
+    } else {
+        if ( strspn(s_request[1], allowed_uri_chars) == strlen(s_request[1]) ) {
+            uri = g_strdup(s_request[1]);
+        } else {
+            //wroong
+            goto stop;
+        }
     }
+
+    /* version and other stuff */
+    version = strdup(s_request[2]);
     
+    /* option headers */
+
+
+
     
+    /* allocate memory for request and copy */
+  
+
+stop:
+    g_free(version);
+    g_free(uri);
     g_strfreev(s_head);
     g_strfreev(s_request);
 

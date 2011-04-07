@@ -36,16 +36,14 @@ enum http_response_code {
 struct http_req {
     enum http_method method;
     gchar *uri;
+	gchar *version; 
     GHashTable *uri_options;
     GHashTable *header_options;
     GString *body;
 };
 
-/*
-static char allowed_uri_chars[] = "0123456789 \
-                                   abcdefghjijklmnopqrstuvwxyz \
-                                   ;/?:@=#&";
-*/
+static char allowed_uri_chars[];
+
 
 struct http_resp {
     enum http_response_code code;

@@ -31,11 +31,11 @@
 #define CONFIG_PATH "api.conf"
 #define BACKLOG (10)
 #define PORT_MIN (1000)
-#define MAX_HTTP_OPTS (10)
-#define MAX_HTTP_LEN (1000)
+//#define MAX_HTTP_OPTS (10)
+//#define MAX_HTTP_LEN (1000)
 #define INPUT_LEN (100)
 #define PORT_LEN (20)
-#define READ_BUF (13)
+#define READ_BUF (32) //max line len
 #define MAX_LINES (128)
 
 /* should be in config file */
@@ -43,7 +43,7 @@
 #define KEY_FILE "/home/rplnt/projects/certs/privkey.pem"
 
 
-/* option flags TODO */
+/* option flags */
 #define OPT_DBG (1U) //don't daemonize and print errors
 #define OPT_ADDR (1U<<1) //address (wheter sock name or ip address) was set
 #define OPT_CFG (1U<<2) 
