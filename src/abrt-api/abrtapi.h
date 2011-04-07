@@ -28,15 +28,13 @@
 #include "http.h"
 
 /* should be in makefile ? */
-#define CONFIG_PATH "api.conf"
-#define BACKLOG (10)
-#define PORT_MIN (1000)
-//#define MAX_HTTP_OPTS (10)
-//#define MAX_HTTP_LEN (1000)
-#define INPUT_LEN (100)
-#define PORT_LEN (20)
-#define READ_BUF (32) //max line len
-#define MAX_LINES (128)
+#define CONFIG_PATH "api.conf" //path to config file
+#define BACKLOG (10) //maximum number of connection
+#define INPUT_LEN (100) //maximum length of url/path input
+#define PORT_LEN (20) //maximum length of port/service
+#define MAX_HEADER_SIZE (10*1024) //max header size
+#define MAX_LINES (128) //max lines in header section
+#define READ_BUF (32) //read from socket at once
 
 /* should be in config file */
 #define CERT_FILE "/home/rplnt/projects/certs/cacert.pem"

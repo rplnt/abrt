@@ -1,8 +1,5 @@
 #include "abrtapi.h"
 
-static char allowed_uri_chars[] = "0123456789 \
-                                   abcdefghjijklmnopqrstuvwxyz \
-                                   ;/?:@=#&.";
 
 int init_n_socket(char *address, char *port)
 {
@@ -156,7 +153,7 @@ int parse_addr_input(char* input, char* addr, char* port)
 /* universal server function */
 void serve(void* sock, int flags)
 {
-    int err, i=0;
+    int err, len=0, i=0;
     bool ignore_next=TRUE; //rfc2616 4.1
     bool head=FALSE;
     gchar buffer[READ_BUF];
@@ -177,19 +174,22 @@ void serve(void* sock, int flags)
         printf ("Received %d chars.\n", (int)strlen(buffer));
         g_string_append(head?body:headers, buffer);
 
-        if ( buffer[err-1] != '\n' ) {
-            //line is too long
-            break;
-        }
 
         /* checking for end of header section */
         if ( head == FALSE && !ignore_next && buffer[0] == '\n' ) {
             parse_head(&request, headers);
             head = TRUE;
+            printf("%d]]",request.method);
             //allocate memory for body or break
             break;
         } else if ( head == FALSE ) {
             ignore_next = (buffer[strlen(buffer)-1] != '\n');
+            len += err;
+            if ( len > MAX_HEADER_SIZE ) {
+                //TODO headers are too long
+                //send 400
+                break;
+            }
         } else {
             //body
             //stop according to content-length
@@ -214,14 +214,20 @@ void serve(void* sock, int flags)
 
 void parse_head(struct http_req* request, GString* headers)
 {
+    int i;
     gchar *p;
     gchar **s_head      = NULL;
     gchar **s_request   = NULL;
     gchar *uri          = NULL;
     gchar *version      = NULL;
 
-//     G_URI_RESERVED_CHARS_ALLOWED_IN_PATH // +/
-//     G_URI_RESERVED_CHARS_ALLOWED_IN_PATH_ELEMENT
+    static char allowed_uri_chars[] = "0123456789 \
+                                   abcdefghjijklmnopqrstuvwxyz \
+                                   ;/?:@=#&.%";
+    static char method_names[][8] = { "GET", "POST", "DELETE", "HEAD",
+                                "PUT", "OPTIONS", "TRACE", "CONNECT"    
+    };
+
 
     /* rfc2616 4.1 */
     if ( headers->str[0] == '\n' ) {
@@ -240,23 +246,34 @@ void parse_head(struct http_req* request, GString* headers)
 	}
 
     /* request method */
-	request->method = is_valid_method(s_request[0])?hash_method(s_request[0]):UNDEFINED;
+    for (i=0; i<METHODS_CNT; i++ ) {
+        if ( g_ascii_strcasecmp(s_request[0], method_names[i]) == 0 ) {
+            request->method = i+1; // 0 = UNDEFINED
+            break;
+        }
+    }
 
-    /* get out url */
+    /* get URL from the request
+     * there is no particular limit in url (or any other option) length
+     * maximum header size is given by MAX_HEADER_SIZE
+     */
     if ( s_request[1][0] != '/' ) {
         if ( g_uri_parse_scheme(s_request[1]) == NULL ) {
+            request->method = UNDEFINED;
             goto stop;
         }
         //url is in format xxx://hostname/rest .. we want the rest
         uri = g_strdup( g_strsplit(s_request[1],"/",4)[3] );
+        //might be a good idea to save the hostname?
     } else {
         if ( strspn(s_request[1], allowed_uri_chars) == strlen(s_request[1]) ) {
             uri = g_strdup(s_request[1]);
         } else {
-            //wroong
+            request->method = UNDEFINED;
             goto stop;
         }
     }
+    
 
     /* version and other stuff */
     version = strdup(s_request[2]);
@@ -293,28 +310,5 @@ void delete_cr(gchar *in)
     
     in[index_l] = '\0';
     
-}
-
-/* create hash of http method to store in request */
-int hash_method(gchar *methodstr)
-{
-    int rt=0;
-    int i=0;
-
-    while ( methodstr[i] != '\0' && rt < 1000 ) {
-        rt += (int)g_ascii_tolower(methodstr[i]);
-        i++;
-    }
-
-    return rt;
-}
-
-/* check if method is valid http method */
-bool is_valid_method(gchar *m)
-{
-    return !(g_ascii_strcasecmp(m,"GET") && g_ascii_strcasecmp(m,"POST") &&
-           g_ascii_strcasecmp(m,"HEAD") && g_ascii_strcasecmp(m,"DELETE") &&
-           g_ascii_strcasecmp(m,"PUT") && g_ascii_strcasecmp(m,"OPTIONS") &&
-           g_ascii_strcasecmp(m,"TRACE") && g_ascii_strcasecmp(m,"CONNECT"));
 }
 

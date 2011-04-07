@@ -1,16 +1,17 @@
 #include <glib/ghash.h>
 
+#define METHODS_CNT (8)
 /* UNDEFINED means that http_req structure wasn't used */
 enum http_method {
-    UNDEFINED   = 0,
-    OPTIONS     = 780,
-    GET         = 320,
-    HEAD        = 402,
-    POST        = 454,
-    PUT         = 345,
-    DELETE      = 627,
-    TRACE       = 527,
-    CONNECT     = 746
+    UNDEFINED, //=0
+    GET,
+    POST,
+    DELETE,
+    HEAD,
+    PUT,
+    OPTIONS,
+    TRACE,
+    CONNECT
 };
 
 enum http_response_code {
@@ -18,7 +19,7 @@ enum http_response_code {
     CREATED = 201,
     ACCEPTED = 202,
     
-    BAD_REQUEST = 400, //bad syntax
+    BAD_REQUEST = 400, //~bad syntax~ change request
     UNAUTHORIZED = 402, //send WWW-Authenticate
     FORBIDDEN = 403,
     NOT_FOUND = 404,
