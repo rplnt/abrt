@@ -29,9 +29,9 @@
 
 /* should be in makefile ? */
 #define CONFIG_PATH "api.conf" //path to config file
-#define BACKLOG (10) //maximum number of connection
-#define INPUT_LEN (100) //maximum length of url/path input
-#define PORT_LEN (20) //maximum length of port/service
+#define BACKLOG (16) //maximum number of connection
+#define INPUT_LEN (128) //maximum length of url/path input
+#define PORT_LEN (16) //maximum length of port/service
 #define MAX_HEADER_SIZE (10*1024) //max header size
 #define MAX_LINES (128) //max lines in header section
 #define READ_BUF (32) //read from socket at once
