@@ -2,14 +2,14 @@
 
 void test() {
     gchar **lala;
-    lala = g_strsplit("http://name.com/url/this/way?and=fajv&no=yes#title", "/", 4);
-	printf("lala: %s", lala[3]);
+    lala = g_strsplit("char\nby\none\n\n", "\n", -1);
+	printf("lala: %d %s", g_strv_length(lala), lala[0]);
 	exit(5);
 }
 
 int main(int argc, char **argv)
 {
-    //test();
+//     test();
     int flags=0; //config flags
     char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket

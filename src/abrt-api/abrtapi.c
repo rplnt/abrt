@@ -26,6 +26,7 @@ int init_n_socket(char *address, char *port)
         perror_msg_and_die("Bind failed\n");
     }
 
+    freeaddrinfo(res);
     return sockfd;
 }
 
@@ -179,7 +180,7 @@ void serve(void* sock, int flags)
         if ( head == FALSE && !ignore_next && buffer[0] == '\n' ) {
             parse_head(&request, headers);
             head = TRUE;
-            printf("%d]]",request.method);
+
             //allocate memory for body or break
             break;
         } else if ( head == FALSE ) {
@@ -199,12 +200,20 @@ void serve(void* sock, int flags)
     }
 
 
-    g_free(headers);
+    g_string_free(headers, true);
     g_free(body);
     //pass http_req, recieve http_resp
     //send http_resp
     //return wheter close socket or continue listening
+    
     //unallocate !*#**load of memory
+    if ( request.method == UNDEFINED ) {
+        g_free(request.uri);
+        g_free(request.version);
+        g_hash_table_unref(request.header_options);
+        g_hash_table_unref(request.uri_options);
+        g_free(request.body);
+    }
     
 }
 
@@ -214,15 +223,19 @@ void serve(void* sock, int flags)
 
 void parse_head(struct http_req* request, GString* headers)
 {
-    int i;
+    int i,len;
     gchar *p;
-    gchar **s_head      = NULL;
-    gchar **s_request   = NULL;
     gchar *uri          = NULL;
     gchar *version      = NULL;
+    gchar *prev_key     = NULL;
+    gchar **s_temp      = NULL;
+    gchar **s_head      = NULL;
+    gchar **s_request   = NULL;
+    GHashTable *h_opts  = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+    GHashTable *h_uri_opts  = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 
-    static char allowed_uri_chars[] = "0123456789 \
-                                   abcdefghjijklmnopqrstuvwxyz \
+    static char allowed_uri_chars[] = "0123456789\
+                                   abcdefghijklmnopqrstuvwxyz\
                                    ;/?:@=#&.%";
     static char method_names[][8] = { "GET", "POST", "DELETE", "HEAD",
                                 "PUT", "OPTIONS", "TRACE", "CONNECT"    
@@ -238,6 +251,7 @@ void parse_head(struct http_req* request, GString* headers)
 
     /* split by new lines */
     s_head = g_strsplit(p, "\n", -1);
+    len = g_strv_length(s_head) - 2; // because of \n\n at the end
 
     /* request line */
     s_request = g_strsplit_set(s_head[0], " \t",3);
@@ -263,7 +277,10 @@ void parse_head(struct http_req* request, GString* headers)
             goto stop;
         }
         //url is in format xxx://hostname/rest .. we want the rest
-        uri = g_strdup( g_strsplit(s_request[1],"/",4)[3] );
+        //TODO add '/'
+        s_temp = g_strsplit(s_request[1],"/",4);
+        uri = g_strdup(s_temp[3]);
+        g_strfreev(s_temp);
         //might be a good idea to save the hostname?
     } else {
         if ( strspn(s_request[1], allowed_uri_chars) == strlen(s_request[1]) ) {
@@ -279,20 +296,73 @@ void parse_head(struct http_req* request, GString* headers)
     version = strdup(s_request[2]);
     
     /* option headers */
+    i = 1;
+    while ( i < len ) {
+        gchar *value, *key, *new_value, **key_value;
+        
+        if ( s_head[i][0] == '\t' || s_head[i][0] == ' ' ) {
+            //continuation of previous header
+            value = g_hash_table_lookup(h_opts, prev_key);
+            if ( value == NULL ) {
+                g_free(prev_key);
+                goto stop;
+            }
+            new_value = g_strjoin(NULL, value, g_strchomp(g_strchug(s_head[i])), NULL);
+            //TODO check valid characters
+            g_hash_table_replace(h_opts, g_strdup(prev_key), new_value);
+        } else {
+            //new key
+            key_value = g_strsplit(s_head[i],": ",-1);
+            if ( g_strv_length(key_value) != 2 ) {
+                g_strfreev(key_value);
+                key_value = g_strsplit(s_head[i],":\t",-1);
+                if ( g_strv_length(key_value) != 2 ) {
+                    g_strfreev(key_value);
+                    g_free(prev_key);
+                    goto stop;
+                }
+            }
+            key = g_ascii_strdown(key_value[0], -1);
+            new_value = g_strdup(g_strchomp(g_strchug(key_value[1])));
+            //validate key/value
+            
+            value = g_hash_table_lookup(h_opts, key);
+            if ( value != NULL ) {
+                g_hash_table_replace(h_opts, key, g_strjoin(NULL, value, new_value, NULL));
+            } else {
+                g_hash_table_insert(h_opts, key, new_value);
+            }
 
+            g_free(prev_key);
+            prev_key = g_strdup(key);
 
-
+            g_strfreev(key_value);
+        }
+        fflush(stderr);
+        i++;
+    }
+    g_hash_table_ref(h_opts);
     
-    /* allocate memory for request and copy */
-  
+    /* uri options */
+    //TODO
+
+    /* fill out request's fields */
+    request->header_options = h_opts;
+    request->version = strdup(version);
+    request->uri = g_strdup(uri);
 
 stop:
-    g_free(version);
+    fflush(stderr);
     g_free(uri);
+    g_free(version);
+    g_free(prev_key);
     g_strfreev(s_head);
     g_strfreev(s_request);
-
+    g_hash_table_unref(h_opts);
+    g_hash_table_unref(h_uri_opts);
 }
+
+
 
 
 /* remove CR in place */
