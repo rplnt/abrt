@@ -311,7 +311,7 @@ static void tv_details_row_activated(
     struct crash_item *item = get_crash_data_item_or_NULL(g_cd, column_name);
     if (!item || !(item->flags & CD_FLAG_TXT))
         return;
-    if (item->flags & CD_FLAG_ONELINE)
+    if (!strchr(item->content, '\n')) /* one line? */
         return;
 
     gchar *arg[3];
@@ -346,7 +346,7 @@ static void tv_details_cursor_changed(
     gtk_tree_model_get(model, &iter, DETAIL_COLUMN_NAME, &column_name, -1);
     struct crash_item *item = get_crash_data_item_or_NULL(g_cd, column_name);
 
-    gboolean editable = (item && (item->flags & (CD_FLAG_TXT|CD_FLAG_ONELINE)) == (CD_FLAG_TXT|CD_FLAG_ONELINE));
+    gboolean editable = (item && (item->flags & CD_FLAG_TXT) && !strchr(item->content, '\n'));
 
     /* Allow user to select the text with mouse.
      * Has undesirable side-effect of allowing user to "edit" the text,
@@ -860,11 +860,6 @@ static void start_event_run(const char *event_name,
     dd_close(dd);
     if (!locked)
         return; /* user refused to steal, or write error, etc... */
-
-    /* Load /etc/abrt/events/foo.{conf,xml} stuff */
-    load_event_config_data();
-    load_event_config_data_from_keyring();
-    //TODO: Load ~/.abrt/events/foo.conf?
 
     GList *env_list = export_event_config(event_name);
     if (spawn_next_command(state, g_dump_dir_name, event_name) < 0)
