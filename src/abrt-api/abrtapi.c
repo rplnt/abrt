@@ -150,82 +150,97 @@ int parse_addr_input(char* input, char* addr, char* port)
 }
 
 
+/* TODO - delete obviously */
+void print_headers(gchar *key, gchar *value) {
+    printf("> %s: %s\n",key, value);
+}
+
+
 
 /* universal server function */
 void serve(void* sock, int flags)
 {
     int err, len=0, i=0;
-    bool ignore_next=TRUE; //rfc2616 4.1
+    bool clean; //clean cut - last read character was '\n'
     bool head=FALSE;
     gchar buffer[READ_BUF];
     GString *headers = g_string_sized_new(READ_BUF);
     GString *body = NULL;
-    struct http_req request = { UNDEFINED, NULL, NULL };
+    struct http_req request = { UNDEFINED, NULL, NULL, NULL, NULL };
     
-    while ( i < MAX_LINES ) {
+    while ( true ) {
         err = (flags & OPT_SSL) ? SSL_read(sock, buffer, READ_BUF-1):
                                   read(*(int*)sock, buffer, READ_BUF-1);
+                                  
         if ( err < 0 ) {
             //TODO handle errno ||  SSL_get_error(ssl,err);
             break;
         }
+        
         if ( err == 0 ) break;
         buffer[err] = '\0';
-        delete_cr(buffer); //removing CRs
-        fprintf (stderr,"Received %d chars.\n", (int)strlen(buffer));
+        clean = delete_cr(buffer);
         g_string_append(head?body:headers, buffer);
         
-        int n=0;
-        while (n<strlen(buffer)) {
-            fprintf(stderr,"%d ",buffer[n]);
-            if ( buffer[n] == 10 ) fprintf(stderr,"\n");
-            n++;
-        }
-        fflush(stderr);
-        
         /* checking for end of header section */
-        if ( head == FALSE && /*!ignore_next &&*/ buffer[0] == '\n' ) {
+        if ( head == FALSE && (g_strstr_len(buffer, -1, "\n\n") != NULL ||
+                                    ( clean && buffer[0] == '\n' )) ) {
             parse_head(&request, headers);
+            /* TODO
+             * check method (GET, UNDEFINED, ..etc.. doesn't have body)
+             * if method has body section
+             *   read content-len
+             *   allcate memory for body (or break)
+             * or break
+             */
+            body = g_string_sized_new(100); /* TEMP -- read above */
             head = TRUE;
-            printf("Request method: %d\n",request.method);
-            printf("Requested uri: %s\n",request.uri);
-            printf("Version string: %s\n",request.version);
-            //allocate memory for body or break
             break;
-        } else if ( head == FALSE ) {
-            ignore_next = (buffer[strlen(buffer)-1] != '\n');
+        } else if ( head == TRUE ) {
+            /* TODO
+             * read body, check content-len
+             * save body to request
+             */
+            break;
+        } else {
+            // count header size (make it nicer?)
             len += err;
             if ( len > MAX_HEADER_SIZE ) {
-                //TODO headers are too long
-                //send 400
+                //TODO header is too long
                 break;
             }
-        } else {
-            //body
-            //stop according to content-length
         }
 
         i++;
     }
 
-    fprintf(stderr,"main loop done\n");
-    g_string_free(headers, true);
-    g_free(body);
+    g_string_free(headers, true); //because we allocated it
+    if ( head ) {
+        request.body = body; //save body
+    }
+
     //pass http_req, recieve http_resp
     //send http_resp
-    //return wheter close socket or continue listening
+
+
+
     
-    //unallocate !*#**load of memory
+    /* free memory */
     if ( request.method != UNDEFINED ) {
+        /* check */
+        printf("Requested path: %s\nOptions:\n", request.uri);
+        g_hash_table_foreach(request.header_options, (GHFunc)print_headers, NULL);
+        /* /check */
         g_free(request.uri);
         g_free(request.version);
         g_hash_table_unref(request.header_options);
-        //g_hash_table_unref(request.uri_options);
-        g_free(request.body);
+        if ( head ) {
+            g_string_free(request.body, true);
+        }
     }
-    
-}
 
+    return;
+}
 
 
 
@@ -307,18 +322,16 @@ void parse_head(struct http_req* request, GString* headers)
     i = 1;
     while ( i < len ) {
         gchar *value, *key, *new_value, **key_value;
-        fprintf(stderr,"Working on #%d: '%s'\n",i,s_head[i]);
+
         if ( s_head[i][0] == '\t' || s_head[i][0] == ' ' ) {
             //continuation of previous header
             value = g_hash_table_lookup(h_opts, prev_key);
             if ( value == NULL ) {
                 goto stop;
-                fprintf(stderr,"STOP1");
             }
             new_value = g_strjoin(NULL, value, g_strchomp(g_strchug(s_head[i])), NULL);
             //TODO check valid characters
             g_hash_table_replace(h_opts, g_strdup(prev_key), new_value);
-            fprintf(stderr,"replace with: %s (continuing %s)\n", new_value, prev_key);
         } else {
             //new key
             key_value = g_strsplit(s_head[i],": ",-1);
@@ -328,7 +341,6 @@ void parse_head(struct http_req* request, GString* headers)
                 if ( g_strv_length(key_value) != 2 ) {
                     g_strfreev(key_value);
                     goto stop;
-                    fprintf(stderr,"STOP2");
                 }
             }
             key = g_ascii_strdown(key_value[0], -1);
@@ -337,11 +349,9 @@ void parse_head(struct http_req* request, GString* headers)
             
             value = g_hash_table_lookup(h_opts, key);
             if ( value != NULL ) {
-                fprintf(stderr,"extending %s with %s%s\n", key,value, new_value);
                 g_hash_table_replace(h_opts, key, g_strjoin(NULL, value, new_value, NULL));
                 g_free(new_value);
             } else {
-                fprintf(stderr,"inserting new: '%s' '%s'\n",key,new_value);
                 g_hash_table_insert(h_opts, key, new_value);
             }
 
@@ -368,13 +378,14 @@ stop:
     g_strfreev(s_head);
     g_strfreev(s_request);
     g_hash_table_unref(h_opts);
+    
 }
 
 
 
 
-/* remove CR in place */
-void delete_cr(gchar *in)
+/* remove CR in place and return last character */
+bool delete_cr(gchar *in)
 {
     int index_l=0, index_r=0;
     
@@ -387,6 +398,8 @@ void delete_cr(gchar *in)
     }
     
     in[index_l] = '\0';
+
+    return in[index_l-1]=='\n';
     
 }
 

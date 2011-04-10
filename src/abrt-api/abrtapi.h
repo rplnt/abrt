@@ -33,7 +33,6 @@
 #define INPUT_LEN (128) //maximum length of url/path input
 #define PORT_LEN (16) //maximum length of port/service
 #define MAX_HEADER_SIZE (10*1024) //max header size
-#define MAX_LINES (128) //max lines in header section
 #define READ_BUF (2560) //read from socket at once
 
 /* should be in config file */
@@ -83,7 +82,7 @@ bool safe_strcpy(char* dest, char* src, int max_len);
 int parse_addr_input(char* input, char* addr, char* port);
 
 /* remove CR characters */
-void delete_cr(gchar* in);
+bool delete_cr( gchar* in);
 
 int hash_method(gchar *methodstr);
 
