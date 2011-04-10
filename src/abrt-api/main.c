@@ -166,17 +166,15 @@ int main(int argc, char **argv)
                 SSL_set_accept_state(ssl);
                 if ( SSL_accept(ssl) == 1 ) {
                     //while whatever serve
-                    serve(ssl,flags);
-
-                    if ( flags & OPT_SSL ) {
-                        //TODO errors
-                        SSL_shutdown(ssl);
-                        SSL_free(ssl);
-                    }
+                    serve(ssl, flags);
+                    //TODO errors
+                    SSL_shutdown(ssl);
                 }
+                SSL_free(ssl);
+                SSL_CTX_free(ctx);
             } else {
                 //while whatever serve
-                serve(&sockfd_in,flags);
+                serve(&sockfd_in, flags);
             }
 
             close(sockfd_in);

@@ -68,7 +68,7 @@ SSL_CTX* init_ssl_context(void)
     ctx = SSL_CTX_new(method);
     if ( ctx == NULL ) {
         ERR_print_errors_fp(stderr); //debug?
-        exit(55);
+        error_msg_and_die("SSL Error\n");
     }
 
     return ctx;
@@ -160,7 +160,7 @@ void serve(void* sock, int flags)
     gchar buffer[READ_BUF];
     GString *headers = g_string_sized_new(READ_BUF);
     GString *body = NULL;
-    struct http_req request = { UNDEFINED, NULL, NULL, NULL };
+    struct http_req request = { UNDEFINED, NULL, NULL };
     
     while ( i < MAX_LINES ) {
         err = (flags & OPT_SSL) ? SSL_read(sock, buffer, READ_BUF-1):
@@ -171,16 +171,25 @@ void serve(void* sock, int flags)
         }
         if ( err == 0 ) break;
         buffer[err] = '\0';
-        delete_cr(buffer); //CR should be present, but who cares?
-        printf ("Received %d chars.\n", (int)strlen(buffer));
+        delete_cr(buffer); //removing CRs
+        fprintf (stderr,"Received %d chars.\n", (int)strlen(buffer));
         g_string_append(head?body:headers, buffer);
-
-
+        
+        int n=0;
+        while (n<strlen(buffer)) {
+            fprintf(stderr,"%d ",buffer[n]);
+            if ( buffer[n] == 10 ) fprintf(stderr,"\n");
+            n++;
+        }
+        fflush(stderr);
+        
         /* checking for end of header section */
-        if ( head == FALSE && !ignore_next && buffer[0] == '\n' ) {
+        if ( head == FALSE && /*!ignore_next &&*/ buffer[0] == '\n' ) {
             parse_head(&request, headers);
             head = TRUE;
-
+            printf("Request method: %d\n",request.method);
+            printf("Requested uri: %s\n",request.uri);
+            printf("Version string: %s\n",request.version);
             //allocate memory for body or break
             break;
         } else if ( head == FALSE ) {
@@ -199,7 +208,7 @@ void serve(void* sock, int flags)
         i++;
     }
 
-
+    fprintf(stderr,"main loop done\n");
     g_string_free(headers, true);
     g_free(body);
     //pass http_req, recieve http_resp
@@ -207,11 +216,11 @@ void serve(void* sock, int flags)
     //return wheter close socket or continue listening
     
     //unallocate !*#**load of memory
-    if ( request.method == UNDEFINED ) {
+    if ( request.method != UNDEFINED ) {
         g_free(request.uri);
         g_free(request.version);
         g_hash_table_unref(request.header_options);
-        g_hash_table_unref(request.uri_options);
+        //g_hash_table_unref(request.uri_options);
         g_free(request.body);
     }
     
@@ -232,7 +241,6 @@ void parse_head(struct http_req* request, GString* headers)
     gchar **s_head      = NULL;
     gchar **s_request   = NULL;
     GHashTable *h_opts  = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
-    GHashTable *h_uri_opts  = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 
     static char allowed_uri_chars[] = "0123456789\
                                    abcdefghijklmnopqrstuvwxyz\
@@ -299,17 +307,18 @@ void parse_head(struct http_req* request, GString* headers)
     i = 1;
     while ( i < len ) {
         gchar *value, *key, *new_value, **key_value;
-        
+        fprintf(stderr,"Working on #%d: '%s'\n",i,s_head[i]);
         if ( s_head[i][0] == '\t' || s_head[i][0] == ' ' ) {
             //continuation of previous header
             value = g_hash_table_lookup(h_opts, prev_key);
             if ( value == NULL ) {
-                g_free(prev_key);
                 goto stop;
+                fprintf(stderr,"STOP1");
             }
             new_value = g_strjoin(NULL, value, g_strchomp(g_strchug(s_head[i])), NULL);
             //TODO check valid characters
             g_hash_table_replace(h_opts, g_strdup(prev_key), new_value);
+            fprintf(stderr,"replace with: %s (continuing %s)\n", new_value, prev_key);
         } else {
             //new key
             key_value = g_strsplit(s_head[i],": ",-1);
@@ -318,8 +327,8 @@ void parse_head(struct http_req* request, GString* headers)
                 key_value = g_strsplit(s_head[i],":\t",-1);
                 if ( g_strv_length(key_value) != 2 ) {
                     g_strfreev(key_value);
-                    g_free(prev_key);
                     goto stop;
+                    fprintf(stderr,"STOP2");
                 }
             }
             key = g_ascii_strdown(key_value[0], -1);
@@ -328,8 +337,11 @@ void parse_head(struct http_req* request, GString* headers)
             
             value = g_hash_table_lookup(h_opts, key);
             if ( value != NULL ) {
+                fprintf(stderr,"extending %s with %s%s\n", key,value, new_value);
                 g_hash_table_replace(h_opts, key, g_strjoin(NULL, value, new_value, NULL));
+                g_free(new_value);
             } else {
+                fprintf(stderr,"inserting new: '%s' '%s'\n",key,new_value);
                 g_hash_table_insert(h_opts, key, new_value);
             }
 
@@ -343,9 +355,6 @@ void parse_head(struct http_req* request, GString* headers)
     }
     g_hash_table_ref(h_opts);
     
-    /* uri options */
-    //TODO
-
     /* fill out request's fields */
     request->header_options = h_opts;
     request->version = strdup(version);
@@ -359,7 +368,6 @@ stop:
     g_strfreev(s_head);
     g_strfreev(s_request);
     g_hash_table_unref(h_opts);
-    g_hash_table_unref(h_uri_opts);
 }
 
 

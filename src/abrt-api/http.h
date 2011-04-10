@@ -38,7 +38,6 @@ struct http_req {
     enum http_method method;
     gchar *uri;
 	gchar *version; 
-    GHashTable *uri_options;
     GHashTable *header_options;
     GString *body;
 };
