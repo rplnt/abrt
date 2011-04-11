@@ -76,7 +76,7 @@ void servex(int sockfd_in);
 void serve_ssl(SSL* ssl);
 
 /* copy string with len check */
-bool safe_strcpy(char* dest, char* src, int max_len);
+bool safe_strcpy(char* dest, const char* src, int max_len);
 
 /* fill out port and/or addr and return flags */
 int parse_addr_input(char* input, char* addr, char* port);

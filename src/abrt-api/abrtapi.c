@@ -75,7 +75,7 @@ SSL_CTX* init_ssl_context(void)
 }
 
 
-/* lala */
+/* TODO */
 void usage_and_exit()
 {
     error_msg_and_die("usage");
@@ -88,7 +88,7 @@ void sigchld_handler(int sig)
 
 
 /* use only for opts parsing (as it exits) */
-bool safe_strcpy(char* dest, char* src, int max_len)
+bool safe_strcpy(char* dest, const char* src, int max_len)
 {
     if ( strlen(src) > max_len ) {
         error_msg_and_die("\"%.8s...\" could not fit into memory\n",src);
@@ -151,7 +151,7 @@ int parse_addr_input(char* input, char* addr, char* port)
 
 
 /* TODO - delete obviously */
-void print_headers(gchar *key, gchar *value) {
+void print_headers(const gchar *key, const gchar *value) {
     printf("> %s: %s\n",key, value);
 }
 
@@ -160,7 +160,7 @@ void print_headers(gchar *key, gchar *value) {
 /* universal server function */
 void serve(void* sock, int flags)
 {
-    int err, len=0, i=0;
+    int err, len=0;
     bool clean; //clean cut - last read character was '\n'
     bool head=FALSE;
     gchar buffer[READ_BUF];
@@ -182,9 +182,9 @@ void serve(void* sock, int flags)
         clean = delete_cr(buffer);
         g_string_append(head?body:headers, buffer);
         
-        /* checking for end of header section */
+        /* end of header sextion? */
         if ( head == FALSE && (g_strstr_len(buffer, -1, "\n\n") != NULL ||
-                                    ( clean && buffer[0] == '\n' )) ) {
+                                        ( clean && buffer[0] == '\n' )) ) {
             parse_head(&request, headers);
             /* TODO
              * check method (GET, UNDEFINED, ..etc.. doesn't have body)
@@ -211,7 +211,6 @@ void serve(void* sock, int flags)
             }
         }
 
-        i++;
     }
 
     g_string_free(headers, true); //because we allocated it
@@ -245,7 +244,7 @@ void serve(void* sock, int flags)
 
 
 
-void parse_head(struct http_req* request, GString* headers)
+void parse_head(struct http_req* request, const GString* headers)
 {
     int i,len;
     gchar *p;
@@ -259,7 +258,7 @@ void parse_head(struct http_req* request, GString* headers)
 
     static char allowed_uri_chars[] = "0123456789\
                                    abcdefghijklmnopqrstuvwxyz\
-                                   ;/?:@=#&.%";
+                                   ;/?:@=&.%";
     static char method_names[][8] = { "GET", "POST", "DELETE", "HEAD",
                                 "PUT", "OPTIONS", "TRACE", "CONNECT"    
     };
@@ -300,9 +299,8 @@ void parse_head(struct http_req* request, GString* headers)
             goto stop;
         }
         //url is in format xxx://hostname/rest .. we want the rest
-        //TODO add '/'
         s_temp = g_strsplit(s_request[1],"/",4);
-        uri = g_strdup(s_temp[3]);
+        uri = g_strjoin(NULL, "/", s_temp[3], NULL);
         g_strfreev(s_temp);
         //might be a good idea to save the hostname?
     } else {
@@ -381,6 +379,11 @@ stop:
     
 }
 
+
+void generate_response(const struct http_req *request, struct http_resp *response)
+{
+    
+}
 
 
 

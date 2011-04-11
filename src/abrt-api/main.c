@@ -1,15 +1,102 @@
 #include "abrtapi.h"
 
 void test() {
-    gchar **lala;
-    lala = g_strsplit("char\nby\none\n\n", "\n", -1);
-	printf("lala: %d %s", g_strv_length(lala), lala[0]);
+//     gchar **lala;
+//     lala = g_strsplit("char\nby\none\n\n", "\n", -1);
+// 	printf("lala: %d %s", g_strv_length(lala), lala[0]);
+
+    const char dir_name[] = "/var/spool/abrt";
+    int i;
+    bool include_reported = true;
+
+    vector_of_crash_data_t *crash_list = new_vector_of_crash_data();
+
+    DIR *dir = opendir(dir_name);
+    struct dirent *dent;
+    while ((dent = readdir(dir)) != NULL)
+    {
+        if (dot_or_dotdot(dent->d_name))
+            continue; /* skip "." and ".." */
+
+        char *dump_dir_name = concat_path_file(dir_name, dent->d_name);
+
+        struct stat statbuf;
+        if (stat(dump_dir_name, &statbuf) == 0
+            && S_ISDIR(statbuf.st_mode)
+        ) {
+
+
+            struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ DD_OPEN_READONLY);
+
+            if (!dd) {
+                exit(3);
+            }
+
+            crash_data_t *crash_data = create_crash_data_from_dump_dir(dd);
+            dd_close(dd);
+
+            add_to_crash_data_ext(crash_data, CD_DUMPDIR, dump_dir_name, CD_FLAG_TXT + CD_FLAG_ISNOTEDITABLE);
+
+
+            if (crash_data)
+                g_ptr_array_add(crash_list, crash_data);
+        }
+        free(dump_dir_name);
+    }
+    closedir(dir);
+
+
+
+
+    for (i = 0; i < crash_list->len; ++i)
+    {
+        crash_data_t *crash = get_crash_data(crash_list, i);
+        if (!include_reported)
+        {
+            const char *msg = get_crash_item_content_or_NULL(crash, FILENAME_REPORTED_TO);
+            if (msg)
+                continue;
+        }
+
+        printf("%u.\n", i);
+
+        GList *list = g_hash_table_get_keys(crash);
+        GList *l = list = g_list_sort(list, (GCompareFunc)strcmp);
+
+        while (l)
+        {
+            const char *key = l->data;
+            if (strcmp(key, CD_DUMPDIR) != 0)
+            {
+                struct crash_item *item = g_hash_table_lookup(crash, key);
+                if (item)
+                {
+                    printf("--------------------\n%s\n-----------------\n%s\n\n\n", key, item->content);
+                }
+            }
+            l = l->next;
+        }
+
+        g_list_free(list);
+
+
+        
+    }
+
+        
+
+
+    
+
+    
+    free_vector_of_crash_data(crash_list);
+    
 	exit(5);
 }
 
 int main(int argc, char **argv)
 {
-//     test();
+    test();
     int flags=0; //config flags
     char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket

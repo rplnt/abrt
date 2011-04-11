@@ -57,7 +57,9 @@ struct http_resp {
  * set http_method - this indicates that parsing was successfull
  * unallocate memory in case of wrong header
  */
-void parse_head(struct http_req *request, GString* headers);
+void parse_head(struct http_req* request, const GString* headers);
+
+void generate_response(const struct http_req *request, struct http_resp *response);
 
 gchar* strcode(enum http_response_code code);
 
