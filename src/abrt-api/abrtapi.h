@@ -101,7 +101,7 @@ bool delete_cr( gchar* in);
 
 int hash_method(gchar *methodstr);
 
-////
+////TODO Clean Up & Comment
 
 void generate_response(const struct http_req *request, struct http_resp *response);
 void fill_crash_details(const char* dir_name /* TODO XML */);

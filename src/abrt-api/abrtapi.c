@@ -404,11 +404,12 @@ void fill_crash_details(const char* dir_name /* TODO XML */)
     logmode = sv_logmode;
 
     crash_data = create_crash_data_from_dump_dir(dd);
+    dd_close(dd);
 
     keys = g_hash_table_get_keys(crash_data);
     keys = p = g_list_sort(keys, (GCompareFunc)strcmp);
 
-    while ( p ) {
+    while (p) {
         printf("*");
         item = g_hash_table_lookup(crash_data, p->data);
         if ( item && !strchr(item->content,'\n') ) {
@@ -428,10 +429,11 @@ void fill_crash_details(const char* dir_name /* TODO XML */)
 /* this will fill out XML tree for response to /problems/ */
 void list_problems(/*TODO xml*/)
 {
-    char *home, *home_path;
-    home = getenv("HOME");
+    char *home;
+    char *home_path;
     GList *list = NULL;
 
+    home = getenv("HOME");
     if ( home ) {
         home_path = concat_path_file(home, ".abrt/spool");
         list = create_list(list, home_path);
@@ -439,17 +441,13 @@ void list_problems(/*TODO xml*/)
     }
     list = create_list(list, (char*)DEBUG_DUMPS_DIR);
 
-
     /* now on each list item call add_problem (to prepared XML tree) */
     g_list_foreach(list, (GFunc)add_problem, (void*)"--------");
 
     
-#ifdef glib_2_28
-    g_list_free_full(list, (GDestroyNotify)free_list); //since 2.28
-#else
+    // g_list_free_full(list, (GDestroyNotify)free_list); //since 2.28
     g_list_foreach(list, (GFunc)free_list, NULL);
     g_list_free(list);
-#endif
 }
 
 
@@ -474,7 +472,6 @@ GList* create_list(GList *list, char* dir_name)
             if (dot_or_dotdot(dent->d_name)) {
                 continue; /* skip "." and ".." */
             }
-
             dump_dir_name = concat_path_file(dir_name, dent->d_name);
 
             struct stat statbuf;
@@ -487,9 +484,8 @@ GList* create_list(GList *list, char* dir_name)
                     problem = g_try_malloc(sizeof(problem_t));
                     if ( problem == NULL ) {
                         //break, clean and respond with error somehow
-                        //return NULL;
+                        //return NULL; //can't - would lost list :/
                     }
-
                     problem->id = g_strdup(dent->d_name);
                     problem->reason = reason;
                     problem->time = time;
@@ -526,7 +522,7 @@ void add_problem(problem_t *problem /* TODO XML */)
             printf("%s\n\t%s\n\t%s\n", problem->id, problem->reason, time_str);
         }
     }
-    //printf("%s\n\t%s\n\t%s\n%s\n", item->id, item->reason, item->time, (gchar*)whatever);
+    //printf("%s\n\t%s\n\t%s\n", problem->id, problem->reason, problem->time);
 }
 
 
