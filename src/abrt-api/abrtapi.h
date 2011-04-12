@@ -1,6 +1,13 @@
 #ifndef ABRTAPI_H
 #define ABRTAPI_H
 
+//THIS SHALL BE REMOVED AS IT OVERRIDE MAKEFILES
+//###########################################################
+#undef DEBUG_DUMPS_DIR
+#define DEBUG_DUMPS_DIR "/var/spool/abrt"
+//###########################################################*/
+//SERIOSLY!
+
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <errno.h>
@@ -19,6 +26,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <wait.h>
+#include <glib/ghash.h>
 #include <glib-2.0/glib.h>
 //#include <glib/gregex.h>
 //#include <libxml2/libxml/parser.h>
@@ -50,6 +58,13 @@
 #define OPT_SSL (1U<<6) //use ssl
 
 #define pass (0)
+
+/* problem summary */
+typedef struct problem_summary  {
+    gchar* id;
+    gchar* time;
+    gchar* reason;
+} problem_t;
 
 /* initialize "classic" socket */
 int init_n_socket(char* address, char* port);
@@ -85,6 +100,16 @@ int parse_addr_input(char* input, char* addr, char* port);
 bool delete_cr( gchar* in);
 
 int hash_method(gchar *methodstr);
+
+////
+
+void generate_response(const struct http_req *request, struct http_resp *response);
+void fill_crash_details(const char* dir_name /* TODO XML */);
+void list_problems(/*TODO xml*/);
+GList* create_list(GList *list, char* dir_name);
+void add_problem(problem_t *problem /* TODO XML */);
+void free_list(problem_t *item);
+                
 
 
 

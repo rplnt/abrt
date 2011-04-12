@@ -382,9 +382,162 @@ stop:
 
 void generate_response(const struct http_req *request, struct http_resp *response)
 {
-    
+    // prepare XML tree and route
+    /* route '/' - TODO
+     * route '/problems' - list_problems();
+     * route '/problems/id' - read_crash_details();
+     */
 }
 
+
+
+/* will read whole dir and append all problems to XML tree */
+void fill_crash_details(const char* dir_name /* TODO XML */)
+{
+    GList *keys, *p;
+    crash_data_t *crash_data;
+    struct crash_item *item;
+
+    int sv_logmode = logmode;
+    logmode = 0; /* suppress EPERM/EACCES errors in opendir */
+    struct dump_dir *dd = dd_opendir(dir_name, /*flags:*/ DD_OPEN_READONLY);
+    logmode = sv_logmode;
+
+    crash_data = create_crash_data_from_dump_dir(dd);
+
+    keys = g_hash_table_get_keys(crash_data);
+    keys = p = g_list_sort(keys, (GCompareFunc)strcmp);
+
+    while ( p ) {
+        printf("*");
+        item = g_hash_table_lookup(crash_data, p->data);
+        if ( item && !strchr(item->content,'\n') ) {
+            printf("[%s] ", (char*)p->data); //key
+            printf("%s\n", item->content); //data
+        }
+        p = p->next;
+    }
+
+    g_list_free(keys);
+    g_hash_table_destroy(crash_data);
+
+    return;
+}
+
+
+/* this will fill out XML tree for response to /problems/ */
+void list_problems(/*TODO xml*/)
+{
+    char *home, *home_path;
+    home = getenv("HOME");
+    GList *list = NULL;
+
+    if ( home ) {
+        home_path = concat_path_file(home, ".abrt/spool");
+        list = create_list(list, home_path);
+        free(home_path);
+    }
+    list = create_list(list, (char*)DEBUG_DUMPS_DIR);
+
+
+    /* now on each list item call add_problem (to prepared XML tree) */
+    g_list_foreach(list, (GFunc)add_problem, (void*)"--------");
+
+    
+#ifdef glib_2_28
+    g_list_free_full(list, (GDestroyNotify)free_list); //since 2.28
+#else
+    g_list_foreach(list, (GFunc)free_list, NULL);
+    g_list_free(list);
+#endif
+}
+
+
+
+
+/* add problems' summary from given direcotry to a list */
+GList* create_list(GList *list, char* dir_name)
+{
+    char *dump_dir_name;
+    DIR *dir;
+    struct dump_dir *dd;
+    char *reason = NULL, *time = NULL;
+    int sv_logmode = logmode;
+
+    /* open "root" report dir */
+    logmode = 0;
+    dir = opendir(dir_name);
+
+    if ( dir != NULL ) {
+        struct dirent *dent;
+        while ( (dent = readdir(dir)) != NULL ) {
+            if (dot_or_dotdot(dent->d_name)) {
+                continue; /* skip "." and ".." */
+            }
+
+            dump_dir_name = concat_path_file(dir_name, dent->d_name);
+
+            struct stat statbuf;
+            if ( stat(dump_dir_name, &statbuf) == 0 && S_ISDIR(statbuf.st_mode ) ) {
+                dd = dd_opendir(dump_dir_name, DD_OPEN_READONLY);
+                if ( dd != NULL ) {
+                    problem_t *problem;
+                    reason = dd_load_text(dd, "reason");
+                    time = dd_load_text(dd, "time");
+                    problem = g_try_malloc(sizeof(problem_t));
+                    if ( problem == NULL ) {
+                        //break, clean and respond with error somehow
+                        //return NULL;
+                    }
+
+                    problem->id = g_strdup(dent->d_name);
+                    problem->reason = reason;
+                    problem->time = time;
+
+                    list = g_list_prepend(list, problem);
+
+                    dd_close(dd);
+                }
+
+            }
+            free(dump_dir_name);
+
+        }
+        closedir(dir);
+    }
+
+    /* back to normal logmode */
+    logmode = sv_logmode;
+
+    return list;
+}
+
+
+/* this will add <problem> to xml tree */
+void add_problem(problem_t *problem /* TODO XML */)
+{
+    char *end;
+    char time_str[256];
+    time_t time;
+
+    time = strtol(problem->time, &end, 10);
+    if (!errno && !*end && end != problem->time) {
+        if ( strftime(time_str, sizeof(time_str), "%c", localtime(&time)) ) {
+            printf("%s\n\t%s\n\t%s\n", problem->id, problem->reason, time_str);
+        }
+    }
+    //printf("%s\n\t%s\n\t%s\n%s\n", item->id, item->reason, item->time, (gchar*)whatever);
+}
+
+
+/* helper that will clean the problems list */
+void free_list(problem_t *item)
+{
+    g_free(item->id);
+    g_free(item->reason);
+    g_free(item->time);
+    g_free(item);
+}
 
 
 /* remove CR in place and return last character */

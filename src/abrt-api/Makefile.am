@@ -10,7 +10,8 @@ abrt_api_CPPFLAGS = \
     $(GLIB_CFLAGS) \
     $(OPENSSL_CFLAGS) \
     -D_GNU_SOURCE \
-    -Wall -Wwrite-strings -Werror
+    -Wall -Wwrite-strings -Werror \
+    -DDEBUG_DUMPS_DIR=\"$(DEBUG_DUMPS_DIR)\"
 #    $(GTK_CFLAGS)
 abrt_api_LDADD = \
     ../lib/libreport.la \

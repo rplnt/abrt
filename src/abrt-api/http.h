@@ -1,4 +1,7 @@
-#include <glib/ghash.h>
+#ifndef HTTP_H
+#define HTTP_H
+
+
 
 #define METHODS_CNT (8)
 /* UNDEFINED means that http_req structure wasn't used */
@@ -64,3 +67,5 @@ void generate_response(const struct http_req *request, struct http_resp *respons
 gchar* strcode(enum http_response_code code);
 
 bool is_valid_method(gchar *methodstr);
+
+#endif
