@@ -99,7 +99,7 @@ static guint add_watch_or_die(GIOChannel *channel, unsigned condition, GIOFunc f
     errno = 0;
     guint r = g_io_add_watch(channel, (GIOCondition)condition, func, NULL);
     if (!r)
-        pvoid error_msg_and_die("g_io_add_watch failed");
+        perror_msg_and_die("g_io_add_watch failed");
     return r;
 }
 
@@ -112,7 +112,7 @@ static gboolean server_socket_cb(GIOChannel *source, GIOCondition condition, gpo
     /* Check the limit for number of simultaneously attached clients. */
     if (socket_client_count >= MAX_CLIENT_COUNT)
     {
-        void error_msg("Too many clients, refusing connections to '%s'", SOCKET_FILE);
+        error_msg("Too many clients, refusing connections to '%s'", SOCKET_FILE);
         /* To avoid infinite loop caused by the descriptor in "ready" state,
          * the callback must be disabled.
          * It is added back in client_free(). */
@@ -124,7 +124,7 @@ static gboolean server_socket_cb(GIOChannel *source, GIOCondition condition, gpo
     int socket = accept(g_io_channel_unix_get_fd(source), NULL, NULL);
     if (socket == -1)
     {
-        pvoid error_msg("accept");
+        perror_msg("accept");
         return TRUE;
     }
 
@@ -132,7 +132,7 @@ static gboolean server_socket_cb(GIOChannel *source, GIOCondition condition, gpo
     pid_t pid = fork();
     if (pid < 0)
     {
-        pvoid error_msg("fork");
+        perror_msg("fork");
         close(socket);
         return TRUE;
     }
@@ -149,7 +149,7 @@ static gboolean server_socket_cb(GIOChannel *source, GIOCondition condition, gpo
         *pp = NULL;
 
         execvp(argv[0], argv);
-        pvoid error_msg_and_die("Can't execute '%s'", argv[0]);
+        perror_msg_and_die("Can't execute '%s'", argv[0]);
     }
     /* parent */
     socket_client_count++;
@@ -175,7 +175,7 @@ static void dumpsocket_init()
     xlisten(socketfd, MAX_CLIENT_COUNT);
 
     if (chmod(SOCKET_FILE, SOCKET_PERMISSION) != 0)
-        pvoid error_msg_and_die("chmod '%s'", SOCKET_FILE);
+        perror_msg_and_die("chmod '%s'", SOCKET_FILE);
 
     socket_channel = g_io_channel_unix_new(socketfd);
     g_io_channel_set_close_on_unref(socket_channel, TRUE);
@@ -209,7 +209,7 @@ static int create_pidfile()
     {
         if (lockf(fd, F_TLOCK, 0) < 0)
         {
-            pvoid error_msg("Can't lock file '%s'", VAR_RUN_PIDFILE);
+            perror_msg("Can't lock file '%s'", VAR_RUN_PIDFILE);
             return -1;
         }
         close_on_exec_on(fd);
@@ -222,7 +222,7 @@ static int create_pidfile()
         return 0;
     }
 
-    pvoid error_msg("Can't open '%s'", VAR_RUN_PIDFILE);
+    perror_msg("Can't open '%s'", VAR_RUN_PIDFILE);
     return -1;
 }
 
@@ -302,7 +302,7 @@ static gboolean handle_inotify_cb(GIOChannel *gio, GIOCondition condition, gpoin
     GIOError err = g_io_channel_read(gio, buf, inotify_bytes, &len);
     if (err != G_IO_ERROR_NONE)
     {
-        pvoid error_msg("Error reading inotify fd");
+        perror_msg("Error reading inotify fd");
         free(buf);
         return FALSE;
     }
@@ -337,7 +337,7 @@ static gboolean handle_inotify_cb(GIOChannel *gio, GIOCondition condition, gpoin
                 {
                     xchdir(dir);
                     execlp("abrt-handle-upload", "abrt-handle-upload", DEBUG_DUMPS_DIR, dir, name, (char*)NULL);
-                    void error_msg_and_die("Can't execute '%s'", "abrt-handle-upload");
+                    error_msg_and_die("Can't execute '%s'", "abrt-handle-upload");
                 }
             }
             continue;
@@ -483,18 +483,18 @@ static void ensure_writable_dir(const char *dir, mode_t mode, const char *user)
     struct stat sb;
 
     if (mkdir(dir, mode) != 0 && errno != EEXIST)
-        pvoid error_msg_and_die("Can't create '%s'", dir);
+        perror_msg_and_die("Can't create '%s'", dir);
     if (stat(dir, &sb) != 0 || !S_ISDIR(sb.st_mode))
-        void error_msg_and_die("'%s' is not a directory", dir);
+        error_msg_and_die("'%s' is not a directory", dir);
 
     struct passwd *pw = getpwnam(user);
     if (!pw)
-        pvoid error_msg_and_die("Can't find user '%s'", user);
+        perror_msg_and_die("Can't find user '%s'", user);
 
     if ((sb.st_uid != pw->pw_uid || sb.st_gid != pw->pw_gid) && chown(dir, pw->pw_uid, pw->pw_gid) != 0)
-        pvoid error_msg_and_die("Can't set owner %u:%u on '%s'", (unsigned int)pw->pw_uid, (unsigned int)pw->pw_gid, dir);
+        perror_msg_and_die("Can't set owner %u:%u on '%s'", (unsigned int)pw->pw_uid, (unsigned int)pw->pw_gid, dir);
     if ((sb.st_mode & 07777) != mode && chmod(dir, mode) != 0)
-        pvoid error_msg_and_die("Can't set mode %o on '%s'", mode, dir);
+        perror_msg_and_die("Can't set mode %o on '%s'", mode, dir);
 }
 
 static void sanitize_dump_dir_rights()
@@ -522,7 +522,7 @@ int main(int argc, char** argv)
 #endif
 
     if (getuid() != 0)
-        void error_msg_and_die("ABRT daemon must be run as root");
+        error_msg_and_die("ABRT daemon must be run as root");
 
     char *env_verbose = getenv("ABRT_VERBOSE");
     if (env_verbose)
@@ -559,7 +559,7 @@ int main(int argc, char** argv)
 
     unsetenv("ABRT_SYSLOG");
     putenv(xasprintf("ABRT_VERBOSE=%u", g_verbose));
-    msg_prefix = PROGNAME; /* for log(), void error_msg() and such */
+    msg_prefix = PROGNAME; /* for log(), error_msg() and such */
     if (opts & OPT_p)
         putenv((char*)"ABRT_PROG_PREFIX=1");
     if (opts & OPT_s)
@@ -581,7 +581,7 @@ int main(int argc, char** argv)
         pid_t pid = fork();
         if (pid < 0)
         {
-            pvoid error_msg_and_die("fork");
+            perror_msg_and_die("fork");
         }
         if (pid > 0)
         {
@@ -598,9 +598,9 @@ int main(int argc, char** argv)
             }
             if (s_sig_caught)
             {
-                void error_msg_and_die("Failed to start: got sig %d", s_sig_caught);
+                error_msg_and_die("Failed to start: got sig %d", s_sig_caught);
             }
-            void error_msg_and_die("Failed to start: timeout waiting for child");
+            error_msg_and_die("Failed to start: timeout waiting for child");
         }
         /* Child (daemon) continues */
         setsid(); /* never fails */
@@ -633,13 +633,13 @@ int main(int argc, char** argv)
         errno = 0;
         int inotify_fd = inotify_init();
         if (inotify_fd == -1)
-            pvoid error_msg_and_die("inotify_init failed");
+            perror_msg_and_die("inotify_init failed");
         close_on_exec_on(inotify_fd);
 
         /* Watching DEBUG_DUMPS_DIR for new files... */
         if (inotify_add_watch(inotify_fd, DEBUG_DUMPS_DIR, IN_CREATE | IN_MOVED_TO) < 0)
         {
-            pvoid error_msg("inotify_add_watch failed on '%s'", DEBUG_DUMPS_DIR);
+            perror_msg("inotify_add_watch failed on '%s'", DEBUG_DUMPS_DIR);
             throw 1;
         }
         if (g_settings_sWatchCrashdumpArchiveDir)
@@ -647,7 +647,7 @@ int main(int argc, char** argv)
             s_upload_watch = inotify_add_watch(inotify_fd, g_settings_sWatchCrashdumpArchiveDir, IN_CLOSE_WRITE|IN_MOVED_TO);
             if (s_upload_watch < 0)
             {
-                pvoid error_msg("inotify_add_watch failed on '%s'", g_settings_sWatchCrashdumpArchiveDir);
+                perror_msg("inotify_add_watch failed on '%s'", g_settings_sWatchCrashdumpArchiveDir);
                 throw 1;
             }
         }
@@ -685,7 +685,7 @@ int main(int argc, char** argv)
     catch (...)
     {
         /* Initialization error */
-        void error_msg("Error while initializing daemon");
+        error_msg("Error while initializing daemon");
         /* Inform parent that initialization failed */
         if (!(opts & OPT_d))
             kill(parent_pid, SIGINT);
@@ -757,9 +757,9 @@ int main(int argc, char** argv)
     /* Exiting */
     if (s_sig_caught && s_sig_caught != SIGALRM && s_sig_caught != SIGCHLD)
     {
-        void error_msg("Got signal %d, exiting", s_sig_caught);
+        error_msg("Got signal %d, exiting", s_sig_caught);
         signal(s_sig_caught, SIG_DFL);
         raise(s_sig_caught);
     }
-    void error_msg_and_die("Exiting");
+    error_msg_and_die("Exiting");
 }

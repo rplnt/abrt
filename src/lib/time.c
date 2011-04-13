@@ -22,7 +22,7 @@
 static void get_mono(struct timespec *ts)
 {
 	if (syscall(__NR_clock_gettime, CLOCK_MONOTONIC, ts))
-		void error_msg_and_die("clock_gettime(MONOTONIC) failed");
+		error_msg_and_die("clock_gettime(MONOTONIC) failed");
 }
 unsigned long long monotonic_ns(void)
 {

@@ -184,12 +184,12 @@ void load_event_config_data(void)
             GError *error = NULL;
             gchar *link = g_file_read_link(fullname, &error);
             if (error != NULL)
-                void error_msg_and_die("Error reading symlink '%s': %s", fullname, error->message);
+                error_msg_and_die("Error reading symlink '%s': %s", fullname, error->message);
 
             gchar *target = g_path_get_basename(link);
             char *ext = strrchr(target, '.');
             if (!ext || 0 != strcmp(ext + 1, "xml"))
-                void error_msg_and_die("Invalid event symlink '%s': expected it to"
+                error_msg_and_die("Invalid event symlink '%s': expected it to"
                                   " point to another xml file", fullname);
             *ext = '\0';
             g_hash_table_replace(g_event_config_symlinks, xstrdup(dent->d_name), target);

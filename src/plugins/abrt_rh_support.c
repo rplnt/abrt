@@ -31,7 +31,7 @@ struct reportfile {
 static void __attribute__((__noreturn__))
 die_xml_oom(void)
 {
-    void error_msg_and_die("can't create XML attribute (out of memory?)");
+    error_msg_and_die("can't create XML attribute (out of memory?)");
 }
 
 static xmlBufferPtr
@@ -350,7 +350,7 @@ send_report_to_new_case(const char* baseURL,
         /* fall through */
 
     default:
-        errmsg = case_state->curl_void error_msg;
+        errmsg = case_state->curl_error_msg;
         if (errmsg && errmsg[0])
             retval = xasprintf("error in case creation: %s", errmsg);
         else
@@ -402,7 +402,7 @@ send_report_to_new_case(const char* baseURL,
 
         default:
             /* Case Creation Succeeded, attachement FAILED */
-            errmsg = atch_state->curl_void error_msg;
+            errmsg = atch_state->curl_error_msg;
             if (atch_state->body && atch_state->body[0])
             {
                 if (errmsg && errmsg[0]

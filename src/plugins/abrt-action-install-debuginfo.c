@@ -23,7 +23,7 @@
 // TODO: honor configure --prefix here:
 #define EXECUTABLE "/usr/bin/abrt-action-install-debuginfo.py"
 
-static void void error_msg_and_die(const char *msg, const char *arg)
+static void error_msg_and_die(const char *msg, const char *arg)
 {
     write(2, msg, strlen(msg));
     if (arg)
@@ -53,9 +53,9 @@ int main(int argc, char **argv)
     while ((arg = *++pp) != NULL)
     {
         if (strncmp(arg, "--cache", 7) == 0)
-            void error_msg_and_die("bad option", arg);
+            error_msg_and_die("bad option", arg);
         if (strncmp(arg, "--tmpdir", 8) == 0)
-            void error_msg_and_die("bad option", arg);
+            error_msg_and_die("bad option", arg);
     }
 
     /* We use full path, and execv instead of execvp in order to
@@ -63,5 +63,5 @@ int main(int argc, char **argv)
      * in his dir by setting up corresponding malicious $PATH.
      */
     execv(EXECUTABLE, argv);
-    void error_msg_and_die("Can't execute", EXECUTABLE);
+    error_msg_and_die("Can't execute", EXECUTABLE);
 }

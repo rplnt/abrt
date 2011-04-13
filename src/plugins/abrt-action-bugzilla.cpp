@@ -606,7 +606,7 @@ void ctx::login(const char* login, const char* passwd)
 //Can't login. Server said: HTTP response code is 301, not 200
 //But this is a 301 redirect! We _can_ follow it if we configure curl to understand that!
     if (!result)
-        void error_msg_and_die("Can't login. Server said: %s", env.fault_string);
+        error_msg_and_die("Can't login. Server said: %s", env.fault_string);
     xmlrpc_DECREF(result);
 }
 
@@ -644,7 +644,7 @@ static void report_to_bugzilla(
     env = getenv("Bugzilla_Password");
     password = env ? env : get_map_string_item_or_empty(settings, "Password");
     if (!login[0] || !password[0])
-        void error_msg_and_die(_("Empty login or password, please check your configuration"));
+        error_msg_and_die(_("Empty login or password, please check your configuration"));
 
     env = getenv("Bugzilla_BugzillaURL");
     bugzilla_url = env ? env : get_map_string_item_or_empty(settings, "BugzillaURL");
@@ -658,11 +658,11 @@ static void report_to_bugzilla(
     const char *component = get_crash_item_content_or_NULL(crash_data, FILENAME_COMPONENT);
     const char *duphash   = get_crash_item_content_or_NULL(crash_data, FILENAME_DUPHASH);
     if (!duphash)
-        void error_msg_and_die(_("Essential file '%s' is missing, can't continue.."),
+        error_msg_and_die(_("Essential file '%s' is missing, can't continue.."),
                           FILENAME_DUPHASH);
 
     if (!*duphash)
-        void error_msg_and_die(_("Essential file '%s' is empty, can't continue.."),
+        error_msg_and_die(_("Essential file '%s' is empty, can't continue.."),
                           FILENAME_DUPHASH);
 
     const char *release   = get_crash_item_content_or_NULL(crash_data, FILENAME_OS_RELEASE);
@@ -696,7 +696,7 @@ static void report_to_bugzilla(
     if (!all_bugs)
     {
         throw_if_xml_fault_occurred(&bz_server.env);
-        void error_msg_and_die(_("Missing mandatory member 'bugs'"));
+        error_msg_and_die(_("Missing mandatory member 'bugs'"));
     }
 
     xmlrpc_int32 bug_id = -1;
@@ -715,7 +715,7 @@ static void report_to_bugzilla(
         {
             bug_info_destroy(&bz);
             throw_if_xml_fault_occurred(&bz_server.env);
-            void error_msg_and_die(_("get_bug_info() failed. Could not collect all mandatory information"));
+            error_msg_and_die(_("get_bug_info() failed. Could not collect all mandatory information"));
         }
 
         if (strcmp(bz.bug_product, product) != 0)
@@ -732,7 +732,7 @@ static void report_to_bugzilla(
             if (!all_bugs)
             {
                 throw_if_xml_fault_occurred(&bz_server.env);
-                void error_msg_and_die(_("Missing mandatory member 'bugs'"));
+                error_msg_and_die(_("Missing mandatory member 'bugs'"));
             }
 
             all_bugs_size = bz_server.get_array_size(all_bugs);
@@ -748,7 +748,7 @@ static void report_to_bugzilla(
                 {
                     bug_info_destroy(&bz);
                     throw_if_xml_fault_occurred(&bz_server.env);
-                    void error_msg_and_die(_("get_bug_info() failed. Could not collect all mandatory information"));
+                    error_msg_and_die(_("get_bug_info() failed. Could not collect all mandatory information"));
                 }
             }
             else
@@ -768,7 +768,7 @@ static void report_to_bugzilla(
         if (bug_id < 0)
         {
             throw_if_xml_fault_occurred(&bz_server.env);
-            void error_msg_and_die(_("Bugzilla entry creation failed"));
+            error_msg_and_die(_("Bugzilla entry creation failed"));
         }
 
         log("Adding attachments to bug %ld", (long)bug_id);
@@ -809,7 +809,7 @@ static void report_to_bugzilla(
             {
                 VERB3 log("Bugzilla could not find a parent of bug %d", (int)original_bug_id);
                 bug_info_destroy(&bz);
-                void error_msg_and_die(_("Bugzilla couldn't find parent of bug %d"), (int)original_bug_id);
+                error_msg_and_die(_("Bugzilla couldn't find parent of bug %d"), (int)original_bug_id);
             }
 
             log("Bug %d is a duplicate, using parent bug %d", bug_id, (int)bz.bug_dup_id);
@@ -824,7 +824,7 @@ static void report_to_bugzilla(
                 {
                     throw_if_xml_fault_occurred(&bz_server.env);
                 }
-                void error_msg_and_die(_("get_bug_info() failed. Could not collect all mandatory information"));
+                error_msg_and_die(_("get_bug_info() failed. Could not collect all mandatory information"));
             }
 
             // found a bug which is not CLOSED as DUPLICATE
@@ -954,7 +954,7 @@ int main(int argc, char **argv)
     xmlrpc_env_init(&env);
     xmlrpc_client_setup_global_const(&env);
     if (env.fault_occurred)
-        void error_msg_and_die("XML-RPC Fault: %s(%d)", env.fault_string, env.fault_code);
+        error_msg_and_die("XML-RPC Fault: %s(%d)", env.fault_string, env.fault_code);
     xmlrpc_env_clean(&env);
 
     report_to_bugzilla(dump_dir_name, settings);

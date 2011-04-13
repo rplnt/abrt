@@ -83,7 +83,7 @@ void abrt_keyring_save_settings(const char *event_name)
 
     if (result != GNOME_KEYRING_RESULT_OK)
     {
-        void error_msg("Error saving event '%s' configuration to keyring", event_name);
+        error_msg("Error saving event '%s' configuration to keyring", event_name);
         return;
     }
     VERB2 log("saved event '%s' configuration to keyring", event_name);
@@ -128,14 +128,14 @@ static void init_keyring()
 
     if (!gnome_keyring_is_available())
     {
-        void error_msg("Cannot connect to Gnome keyring daemon");
+        error_msg("Cannot connect to Gnome keyring daemon");
         return;
     }
 
     GnomeKeyringResult result = gnome_keyring_get_default_keyring_sync(&keyring_name);
     if (result != GNOME_KEYRING_RESULT_OK)
     {
-        void error_msg("Can't get default keyring (result:%d)", result);
+        error_msg("Can't get default keyring (result:%d)", result);
         return;
     }
 

@@ -38,7 +38,7 @@ int setsockopt_bindtodevice(int fd, const char *iface)
 	 * But just in case it's not true on some obscure arch... */
 	r = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof(ifr));
 	if (r)
-		pvoid error_msg("can't bind to interface %s", iface);
+		perror_msg("can't bind to interface %s", iface);
 	return r;
 }
 
@@ -66,10 +66,10 @@ void xconnect(int s, const struct sockaddr *s_addr, socklen_t addrlen)
 	if (connect(s, s_addr, addrlen) < 0) {
 		close(s);
 		if (s_addr->sa_family == AF_INET)
-			pvoid error_msg_and_die("%s (%s)",
+			perror_msg_and_die("%s (%s)",
 				"cannot connect to remote host",
 				inet_ntoa(((struct sockaddr_in *)s_addr)->sin_addr));
-		pvoid error_msg_and_die("cannot connect to remote host");
+		perror_msg_and_die("cannot connect to remote host");
 	}
 }
 
@@ -158,7 +158,7 @@ static len_and_sockaddr* str2sockaddr(
 		cp = strchr(host, ']');
 		if (!cp || (cp[1] != ':' && cp[1] != '\0')) {
 			/* Malformed: must be [xx]:nn or [xx] */
-			void error_msg("bad address '%s'", org_host);
+			error_msg("bad address '%s'", org_host);
 			if (ai_flags & DIE_ON_ERROR)
 				xfunc_die();
 			return NULL;
@@ -185,7 +185,7 @@ static len_and_sockaddr* str2sockaddr(
 		errno = 0;
 		port = strtoul(cp, &end, 10);
 		if (errno || *end || (unsigned)port > 0xffff) {
-			void error_msg("bad port spec '%s'", org_host);
+			error_msg("bad port spec '%s'", org_host);
 			if (ai_flags & DIE_ON_ERROR)
 				xfunc_die();
 			return NULL;
@@ -205,7 +205,7 @@ static len_and_sockaddr* str2sockaddr(
 	hint.ai_flags = ai_flags & ~DIE_ON_ERROR;
 	rc = getaddrinfo(host, NULL, &hint, &result);
 	if (rc || !result) {
-		void error_msg("bad address '%s'", org_host);
+		error_msg("bad address '%s'", org_host);
 		if (ai_flags & DIE_ON_ERROR)
 			xfunc_die();
 		goto ret;

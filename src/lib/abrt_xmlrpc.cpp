@@ -21,7 +21,7 @@
 
 void throw_xml_fault(xmlrpc_env *env)
 {
-    void error_msg_and_die("XML-RPC Fault(%d): %s", env->fault_code, env->fault_string);
+    error_msg_and_die("XML-RPC Fault(%d): %s", env->fault_code, env->fault_string);
 }
 
 void throw_if_xml_fault_occurred(xmlrpc_env *env)

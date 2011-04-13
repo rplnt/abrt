@@ -28,7 +28,7 @@ static pid_t start_command(char **argv)
   pid_t pid = vfork();
   if (pid < 0)
   {
-    pvoid error_msg_and_die("vfork");
+    perror_msg_and_die("vfork");
   }
   if (pid == 0)
   { // new process
@@ -45,13 +45,13 @@ static int finish_command(pid_t pid, char **argv)
   while ((waiting = waitpid(pid, &status, 0)) < 0 && errno == EINTR)
     continue;
   if (waiting < 0)
-    pvoid error_msg_and_die("waitpid");
+    perror_msg_and_die("waitpid");
 
   int code = -1;
   if (WIFSIGNALED(status))
   {
     code = WTERMSIG(status);
-    void error_msg("'%s' killed by signal %d", argv[0], code);
+    error_msg("'%s' killed by signal %d", argv[0], code);
     code += 128; /* shells use this convention for deaths by signal */
   }
   else /* if (WIFEXITED(status)) */
@@ -59,7 +59,7 @@ static int finish_command(pid_t pid, char **argv)
     code = WEXITSTATUS(status);
     if (code == 127)
     {
-      void error_msg_and_die("Can't run '%s'", argv[0]);
+      error_msg_and_die("Can't run '%s'", argv[0]);
     }
   }
 

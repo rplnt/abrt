@@ -69,7 +69,7 @@ struct dump_dir *create_dump_dir_from_crash_data(crash_data_t *crash_data, const
     {
         if (name[0] == '.' || strchr(name, '/'))
         {
-            void error_msg("Crash data field name contains disallowed chars: '%s'", name);
+            error_msg("Crash data field name contains disallowed chars: '%s'", name);
             goto next;
         }
 

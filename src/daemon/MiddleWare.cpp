@@ -140,7 +140,7 @@ static mw_result_t CreateCrashReport(const char *dump_dir_name,
         if (!uid_matches)
         {
             dd_close(dd);
-            void error_msg("Dump directory '%s' can't be accessed by user with uid %ld",
+            error_msg("Dump directory '%s' can't be accessed by user with uid %ld",
                       dump_dir_name, caller_uid);
             r = MW_PERM_ERROR;
             goto ret;
@@ -164,7 +164,7 @@ static mw_result_t CreateCrashReport(const char *dump_dir_name,
     *crash_data = DebugDumpToCrashReport(dump_dir_name);
     if (!*crash_data)
     {
-        void error_msg("Error loading crash data");
+        error_msg("Error loading crash data");
         r = MW_ERROR;
     }
 
@@ -628,7 +628,7 @@ vector_of_crash_data_t *GetCrashInfos(long caller_uid)
                 crash_data_t *crash_data = FillCrashInfo(dump_dir_name);
                 if (!crash_data)
                 {
-                    void error_msg("Dump directory %s doesn't exist or misses crucial files, deleting", dump_dir_name);
+                    error_msg("Dump directory %s doesn't exist or misses crucial files, deleting", dump_dir_name);
                     delete_dump_dir(dump_dir_name);
                 }
                 else
@@ -663,16 +663,16 @@ void CreateReport(const char* crash_id, long caller_uid, int force, crash_data_t
             VERB2 log_crash_data(*crash_data, "crashReport");
             break;
         case MW_NOENT_ERROR:
-            void error_msg("Can't find crash with id '%s'", crash_id);
+            error_msg("Can't find crash with id '%s'", crash_id);
             break;
         case MW_PERM_ERROR:
-            void error_msg("Can't find crash with id '%s'", crash_id);
+            error_msg("Can't find crash with id '%s'", crash_id);
             break;
         case MW_PLUGIN_ERROR:
-            void error_msg("Particular analyzer plugin isn't loaded or there is an error within plugin(s)");
+            error_msg("Particular analyzer plugin isn't loaded or there is an error within plugin(s)");
             break;
         default:
-            void error_msg("Corrupted crash with id %s, deleting", crash_id);
+            error_msg("Corrupted crash with id %s, deleting", crash_id);
             DeleteDebugDump(crash_id, /*caller_uid:*/ 0);
             break;
     }
@@ -727,7 +727,7 @@ int CreateReportThread(const char* crash_id, long caller_uid, int force, const c
         /* The only reason this may happen is system-wide resource starvation,
          * or ulimit is exceeded (someone floods us with CreateReport() dbus calls?)
          */
-        void error_msg("Can't create thread");
+        error_msg("Can't create thread");
         return r;
     }
     VERB3 log("Thread %llx created", (unsigned long long)thread_data->thread_id);
@@ -744,7 +744,7 @@ int DeleteDebugDump(const char *dump_dir_name, long caller_uid)
      || strstr(dump_dir_name + strlen(DEBUG_DUMPS_DIR), "/.")
     ) {
         /* Then refuse to operate on it (someone is attacking us??) */
-        void error_msg("Bad dump directory name '%s', not deleting", dump_dir_name);
+        error_msg("Bad dump directory name '%s', not deleting", dump_dir_name);
         return MW_ERROR;
     }
 
@@ -768,7 +768,7 @@ int DeleteDebugDump(const char *dump_dir_name, long caller_uid)
             if (!uid_matches)
             {
                 dd_close(dd);
-                void error_msg("Dump directory '%s' can't be accessed by user with uid %ld", dump_dir_name, caller_uid);
+                error_msg("Dump directory '%s' can't be accessed by user with uid %ld", dump_dir_name, caller_uid);
                 return 1;
             }
         }

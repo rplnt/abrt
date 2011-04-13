@@ -146,7 +146,7 @@ static void start_element(GMarkupParseContext *context,
     {
         if (parse_data->cur_option)
         {
-            void error_msg("error, option nested in option");
+            error_msg("error, option nested in option");
             return;
         }
 
@@ -324,11 +324,11 @@ static void passthrough(GMarkupParseContext *context,
 
 // Called on error, including one set by other
 // methods in the vtable. The GError should not be freed.
-static void error(GMarkupParseContext *context,
+static error(GMarkupParseContext *context,
           GError *error,
           gpointer user_data)
 {
-    void error_msg("error in XML parsing");
+    error_msg("error in XML parsing");
 }
 
 /* this function takes 2 parameters

@@ -491,7 +491,7 @@ static unsigned save_oops_to_dump_dir(GList *oops_list, unsigned oops_cnt)
         fclose(tainted_fp);
     }
     else
-        pvoid error_msg("Can't open '%s'", "/proc/sys/kernel/tainted");
+        perror_msg("Can't open '%s'", "/proc/sys/kernel/tainted");
 
     char *cmdline_str = NULL;
     FILE *cmdline_fp = fopen("/proc/cmdline", "r");
@@ -614,7 +614,7 @@ int main(int argc, char **argv)
     {
         inotify_fd = inotify_init();
         if (inotify_fd == -1)
-            pvoid error_msg_and_die("inotify_init failed");
+            perror_msg_and_die("inotify_init failed");
         //close_on_exec_on(inotify_fd);
     }
 
@@ -661,7 +661,7 @@ int main(int argc, char **argv)
             if (file_fd < 0)
             {
                 if (!(opts & OPT_w))
-                    pvoid error_msg_and_die("Can't open '%s'", filename);
+                    perror_msg_and_die("Can't open '%s'", filename);
                 /* with -w, we ignore open errors */
             }
             else
@@ -672,7 +672,7 @@ int main(int argc, char **argv)
                 {
                     wd = inotify_add_watch(inotify_fd, filename, IN_MODIFY | IN_MOVE_SELF | IN_DELETE_SELF);
                     if (wd < 0)
-                        pvoid error_msg("inotify_add_watch failed on '%s'", filename);
+                        perror_msg("inotify_add_watch failed on '%s'", filename);
                     else
                         VERB2 log("Added inotify watch for '%s'", filename);
                 }
@@ -744,7 +744,7 @@ int main(int argc, char **argv)
             /* We block here: */
             int len = read(inotify_fd, buf, sizeof(buf));
             if (len < 0 && errno != EINTR) /* I saw EINTR here on strace attach */
-                pvoid error_msg("Error reading inotify fd");
+                perror_msg("Error reading inotify fd");
             /* we don't actually check what happened to file -
              * the code will handle all possibilities.
              */

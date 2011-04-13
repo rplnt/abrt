@@ -75,7 +75,7 @@ static off_t copyfd_sparse(int src_fd, int dst_fd1, int dst_fd2, off_t size2)
 				        )
 				    )
 				) {
-					pvoid error_msg("write error");
+					perror_msg("write error");
 					total = -1;
 					goto out;
 				}
@@ -84,7 +84,7 @@ static off_t copyfd_sparse(int src_fd, int dst_fd1, int dst_fd2, off_t size2)
 			goto out;
 		}
 		if (rd < 0) {
-			pvoid error_msg("read error");
+			perror_msg("read error");
 			total = -1;
 			goto out;
 		}
@@ -98,7 +98,7 @@ static off_t copyfd_sparse(int src_fd, int dst_fd1, int dst_fd2, off_t size2)
 				ssize_t wr1 = full_write(dst_fd1, buffer, rd);
 				ssize_t wr2 = (dst_fd2 >= 0 ? full_write(dst_fd2, buffer, rd) : rd);
 				if (wr1 < rd || wr2 < rd) {
-					pvoid error_msg("write error");
+					perror_msg("write error");
 					total = -1;
 					goto out;
 				}
@@ -186,7 +186,7 @@ static int open_user_core(const char *user_pwd, uid_t uid, pid_t pid, char **per
     if (user_pwd == NULL
      || chdir(user_pwd) != 0
     ) {
-        pvoid error_msg("can't cd to %s", user_pwd);
+        perror_msg("can't cd to %s", user_pwd);
         return -1;
     }
 
@@ -287,12 +287,12 @@ static int open_user_core(const char *user_pwd, uid_t uid, pid_t pid, char **per
      || sb.st_nlink != 1
     /* kernel internal dumper checks this too: if (inode->i_uid != current->fsuid) <fail>, need to mimic? */
     ) {
-        pvoid error_msg("%s/%s is not a regular file with link count 1", user_pwd, core_basename);
+        perror_msg("%s/%s is not a regular file with link count 1", user_pwd, core_basename);
         return -1;
     }
     if (ftruncate(user_core_fd, 0) != 0) {
         /* perror first, otherwise unlink may trash errno */
-        pvoid error_msg("truncate %s/%s", user_pwd, core_basename);
+        perror_msg("truncate %s/%s", user_pwd, core_basename);
         unlink(core_basename);
         return -1;
     }
@@ -308,7 +308,7 @@ int main(int argc, char** argv)
     {
         /* percent specifier:                %s    %c              %p  %u  %g  %t   %h       %e */
         /* argv:                 [0] [1]     [2]   [3]             [4] [5] [6] [7]  [8]      [9]         [10] */
-        void error_msg_and_die("Usage: %s DUMPDIR SIGNO CORE_SIZE_LIMIT PID UID GID TIME HOSTNAME BINARY_NAME [OLD_PATTERN]", argv[0]);
+        error_msg_and_die("Usage: %s DUMPDIR SIGNO CORE_SIZE_LIMIT PID UID GID TIME HOSTNAME BINARY_NAME [OLD_PATTERN]", argv[0]);
     }
 
     /* Not needed on 2.6.30.
@@ -343,7 +343,7 @@ int main(int argc, char** argv)
     uid_t uid = xatoi_positive(argv[5]);
     if (errno || pid <= 0)
     {
-        pvoid error_msg_and_die("pid '%s' or limit '%s' is bogus", argv[4], argv[3]);
+        perror_msg_and_die("pid '%s' or limit '%s' is bogus", argv[4], argv[3]);
     }
     if (argv[10]) /* OLD_PATTERN */
     {
@@ -359,7 +359,7 @@ int main(int argc, char** argv)
             /* Until recently, kernels were truncating expanded core pattern.
              * In this case, we end up here...
              */
-            void error_msg("bad old pattern '%s', ignoring and using 'core'", argv[10]);
+            error_msg("bad old pattern '%s', ignoring and using 'core'", argv[10]);
             /* core_basename = "core"; - already is */
             free(buf);
         }
@@ -369,7 +369,7 @@ int main(int argc, char** argv)
     char *executable = get_executable(pid, &src_fd_binary);
     if (executable && strstr(executable, "/abrt-hook-ccpp"))
     {
-        void error_msg_and_die("pid %lu is '%s', not dumping it to avoid recursion",
+        error_msg_and_die("pid %lu is '%s', not dumping it to avoid recursion",
                         (long)pid, executable);
     }
 
@@ -395,7 +395,7 @@ int main(int argc, char** argv)
     if (executable == NULL)
     {
         /* readlink on /proc/$PID/exe failed, don't create abrt dump dir */
-        void error_msg("can't read /proc/%lu/exe link", (long)pid);
+        error_msg("can't read /proc/%lu/exe link", (long)pid);
         goto create_user_core;
     }
 
@@ -452,7 +452,7 @@ int main(int argc, char** argv)
                 path[sz] = '\0';
                 if (strcmp(executable, path) == 0)
                 {
-                    void error_msg("not dumping repeating crash in '%s'", executable);
+                    error_msg("not dumping repeating crash in '%s'", executable);
                     if (setting_MakeCompatCore)
                         goto create_user_core;
                     return 1;
@@ -482,7 +482,7 @@ int main(int argc, char** argv)
             unlink(path);
             /* copyfd_eof logs the error including errno string,
              * but it does not log file name */
-            void error_msg_and_die("error saving coredump to %s", path);
+            error_msg_and_die("error saving coredump to %s", path);
         }
         log("saved core dump of pid %lu (%s) to %s (%llu bytes)", (long)pid, executable, path, (long long)core_size);
         return 0;
@@ -530,7 +530,7 @@ int main(int argc, char** argv)
             if (sz < 0 || fsync(dst_fd_binary) != 0)
             {
                 unlink(path);
-                void error_msg_and_die("error saving binary image to %s", path);
+                error_msg_and_die("error saving binary image to %s", path);
             }
             close(dst_fd_binary);
             close(src_fd_binary);
@@ -548,7 +548,7 @@ int main(int argc, char** argv)
                 unlink(core_basename);
             }
             errno = sv_errno;
-            pvoid error_msg_and_die("can't open '%s'", path);
+            perror_msg_and_die("can't open '%s'", path);
         }
         fchown(abrt_core_fd, dd->dd_uid, dd->dd_gid);
 
@@ -578,7 +578,7 @@ int main(int argc, char** argv)
             }
             /* copyfd_sparse logs the error including errno string,
              * but it does not log file name */
-            void error_msg_and_die("error writing %s", path);
+            error_msg_and_die("error writing %s", path);
         }
         log("saved core dump of pid %lu (%s) to %s (%llu bytes)", (long)pid, executable, path, (long long)core_size);
         if (user_core_fd >= 0 && core_size >= ulimit_c)
@@ -618,7 +618,7 @@ int main(int argc, char** argv)
     off_t core_size = copyfd_size(STDIN_FILENO, user_core_fd, ulimit_c, COPYFD_SPARSE);
     if (core_size < 0 || fsync(user_core_fd) != 0) {
         /* perror first, otherwise unlink may trash errno */
-        pvoid error_msg("error writing %s/%s", user_pwd, core_basename);
+        perror_msg("error writing %s/%s", user_pwd, core_basename);
         xchdir(user_pwd);
         unlink(core_basename);
         return 1;

@@ -168,7 +168,7 @@ enum {
         EXECFLG_ERR2OUT    = 1 << 4,
         /* open child's stderr to /dev/null: */
         EXECFLG_ERR_NUL    = 1 << 5,
-        /* suppress pvoid error_msg("Can't execute 'foo'") if exec fails */
+        /* suppress perror_msg("Can't execute 'foo'") if exec fails */
         EXECFLG_QUIET      = 1 << 6,
         EXECFLG_SETGUID    = 1 << 7,
         EXECFLG_SETSID     = 1 << 8,

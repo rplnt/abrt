@@ -12,7 +12,7 @@ void xread(int fd, void *buf, size_t count)
     {
         ssize_t size = full_read(fd, buf, count);
         if ((size_t)size != count)
-            void error_msg_and_die("short read");
+            error_msg_and_die("short read");
     }
 }
 

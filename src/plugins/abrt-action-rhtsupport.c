@@ -70,7 +70,7 @@ static void report_to_rhtsupport(
         free(url);
         free(login);
         free(password);
-        void error_msg_and_die(_("Empty RHTS login or password"));
+        error_msg_and_die(_("Empty RHTS login or password"));
         return;
     }
 
@@ -98,7 +98,7 @@ static void report_to_rhtsupport(
     /* mkdtemp does mkdir(xxx, 0700), should be safe (is it?) */
     if (mkdtemp(tmpdir_name) == NULL)
     {
-        void error_msg_and_die(_("Can't create a temporary directory in /tmp"));
+        error_msg_and_die(_("Can't create a temporary directory in /tmp"));
     }
     tempfile = xasprintf("%s/tmp-%s-%lu.tar.gz",tmpdir_name, iso_date_string(NULL), (long)getpid());
 
@@ -112,7 +112,7 @@ static void report_to_rhtsupport(
         xmove_fd(xopen3(tempfile, O_WRONLY | O_CREAT | O_EXCL, 0600), 1);
         xmove_fd(pipe_from_parent_to_child[0], 0);
         execlp("gzip", "gzip", NULL);
-        pvoid error_msg_and_die("can't execute '%s'", "gzip");
+        perror_msg_and_die("can't execute '%s'", "gzip");
     }
     close(pipe_from_parent_to_child[0]);
 
@@ -224,7 +224,7 @@ static void report_to_rhtsupport(
                     break;
             }
             /* Use sanitized string as error message */
-            void error_msg_and_die("%s", result);
+            error_msg_and_die("%s", result);
         }
 
         /* No error */
@@ -261,7 +261,7 @@ static void report_to_rhtsupport(
     free_crash_data(crash_data);
 
     if (errmsg)
-        void error_msg_and_die("%s", errmsg);
+        error_msg_and_die("%s", errmsg);
 }
 
 int main(int argc, char **argv)
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
     xmlrpc_env_init(&env);
     xmlrpc_client_setup_global_const(&env);
     if (env.fault_occurred)
-        void error_msg_and_die("XML-RPC Fault: %s(%d)", env.fault_string, env.fault_code);
+        error_msg_and_die("XML-RPC Fault: %s(%d)", env.fault_string, env.fault_code);
     xmlrpc_env_clean(&env);
 
     report_to_rhtsupport(dump_dir_name, settings);

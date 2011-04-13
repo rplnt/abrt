@@ -40,7 +40,7 @@ static void init_notify(void)
     errno = 0;
     inotify_fd = inotify_init();
     if (inotify_fd < 0)
-        pvoid error_msg("inotify_init failed");
+        perror_msg("inotify_init failed");
     else
     {
         close_on_exec_on(inotify_fd);
@@ -97,7 +97,7 @@ static void scan_directory_and_add_to_dirlist(const char *path)
     if (!dp)
     {
         /* We don't want to yell if, say, $HOME/.abrt/spool doesn't exist */
-        //pvoid error_msg("Can't open directory '%s'", path);
+        //perror_msg("Can't open directory '%s'", path);
         return;
     }
 
@@ -127,7 +127,7 @@ static void scan_directory_and_add_to_dirlist(const char *path)
             | IN_MOVED_TO       // File moved into watched directory
     ) < 0)
     {
-        pvoid error_msg("inotify_add_watch failed on '%s'", path);
+        perror_msg("inotify_add_watch failed on '%s'", path);
     }
 }
 

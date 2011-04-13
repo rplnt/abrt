@@ -53,7 +53,7 @@ void rpm_init()
 {
     int status = rpmReadConfigFiles((const char*)NULL, (const char*)NULL);
     if (status != 0)
-        void error_msg("error reading rc files");
+        error_msg("error reading rc files");
 
     list_fingerprints = g_list_alloc();
 }
@@ -80,7 +80,7 @@ void rpm_load_gpgkey(const char* filename)
     if (pgpReadPkts(filename, &pkt, &pklen) != PGPARMOR_PUBKEY)
     {
         free(pkt);
-        void error_msg("Can't load public GPG key %s", filename);
+        error_msg("Can't load public GPG key %s", filename);
         return;
     }
 
@@ -185,7 +185,7 @@ char* rpm_get_component(const char* filename)
     srpm = headerFormat(header, "%{SOURCERPM}", &errmsg);
     if (!srpm && errmsg)
     {
-        void error_msg("cannot get srpm. reason: %s", errmsg);
+        error_msg("cannot get srpm. reason: %s", errmsg);
         goto error;
     }
 
@@ -213,7 +213,7 @@ char* rpm_get_package_nvr(const char* filename)
 
     nvr = headerFormat(header, "%{NAME}-%{VERSION}-%{RELEASE}", &errmsg);
     if (!nvr && errmsg)
-        void error_msg("cannot get nvr. reason: %s", errmsg);
+        error_msg("cannot get nvr. reason: %s", errmsg);
 
 error:
     rpmdbFreeIterator(iter);
