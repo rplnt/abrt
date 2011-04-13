@@ -120,7 +120,7 @@ static void write_crash_report_field(FILE *fp, crash_data_t *crash_data,
     if (!value)
     {
         // exit silently, all fields are optional for now
-        //error_msg("Field %s not found", field);
+        //void error_msg("Field %s not found", field);
         return;
     }
 
@@ -191,7 +191,7 @@ static int read_crash_report_field(const char *text, crash_data_t *report,
     struct crash_item *value = get_crash_data_item_or_NULL(report, field);
     if (!value)
     {
-        error_msg("Field %s not found", field);
+        void error_msg("Field %s not found", field);
         return 0;
     }
 
@@ -258,7 +258,7 @@ static void create_fields_for_editor(crash_data_t *crash_data)
  * Runs external editor.
  * Returns:
  *  0 if the launch was successful
- *  1 if it failed. The error reason is logged using error_msg()
+ *  1 if it failed. The error reason is logged using void error_msg()
  */
 static int launch_editor(const char *path)
 {
@@ -273,7 +273,7 @@ static int launch_editor(const char *path)
     terminal = getenv("TERM");
     if (!editor && (!terminal || strcmp(terminal, "dumb") == 0))
     {
-        error_msg(_("Cannot run vi: $TERM, $VISUAL and $EDITOR are not set"));
+        void error_msg(_("Cannot run vi: $TERM, $VISUAL and $EDITOR are not set"));
         return 1;
     }
 
@@ -302,7 +302,7 @@ static int run_report_editor(crash_data_t *crash_data)
     int fd = mkstemp(filename);
     if (fd == -1) /* errno is set */
     {
-        perror_msg("can't generate temporary file name");
+        pvoid error_msg("can't generate temporary file name");
         return 2;
     }
 
@@ -316,7 +316,7 @@ static int run_report_editor(crash_data_t *crash_data)
 
     if (fclose(fp)) /* errno is set */
     {
-        perror_msg("can't write '%s'", filename);
+        pvoid error_msg("can't write '%s'", filename);
         return 2;
     }
 
@@ -328,7 +328,7 @@ static int run_report_editor(crash_data_t *crash_data)
     fp = fopen(filename, "r");
     if (!fp) /* errno is set */
     {
-        perror_msg("can't open '%s' to read the crash report", filename);
+        pvoid error_msg("can't open '%s' to read the crash report", filename);
         return 2;
     }
 
@@ -339,7 +339,7 @@ static int run_report_editor(crash_data_t *crash_data)
     char *text = (char*)xmalloc(size + 1);
     if (fread(text, 1, size, fp) != size)
     {
-        error_msg("can't read '%s'", filename);
+        void error_msg("can't read '%s'", filename);
         fclose(fp);
         return 2;
     }
@@ -349,7 +349,7 @@ static int run_report_editor(crash_data_t *crash_data)
     // Delete the tempfile.
     if (unlink(filename) == -1) /* errno is set */
     {
-        perror_msg("can't unlink %s", filename);
+        pvoid error_msg("can't unlink %s", filename);
     }
 
     remove_comments_and_unescape(text);
@@ -417,7 +417,7 @@ static bool set_echo(bool enable)
 
     t.c_lflag ^= ECHO;
     if (tcsetattr(STDIN_FILENO, TCSANOW, &t) < 0)
-        perror_msg_and_die("tcsetattr");
+        pvoid error_msg_and_die("tcsetattr");
 
     return true;
 }
@@ -497,7 +497,7 @@ static void ask_for_missing_settings(const char *event_name)
     }
 
     /* we ask for 3 times and still don't have valid infromation */
-    error_msg_and_die("Invalid input, program exiting...");
+    void error_msg_and_die("Invalid input, program exiting...");
 }
 
 struct logging_state {
@@ -542,7 +542,7 @@ static int run_events(const char *dump_dir_name, GList *events)
         }
         else
         {
-            error_msg("Reporting via '%s' was not successful%s%s",
+            void error_msg("Reporting via '%s' was not successful%s%s",
                     event,
                     l_state.last_line ? ": " : "",
                     l_state.last_line ? l_state.last_line : ""
@@ -626,7 +626,7 @@ char *select_event_option(GList *list_options)
     }
 
     if (ii == 3)
-        error_msg_and_die(_("Invalid input, program exiting..."));
+        void error_msg_and_die(_("Invalid input, program exiting..."));
 
     GList *choosen = g_list_nth(list_options, picked);
     return xstrdup((char*)choosen->data);
@@ -726,7 +726,7 @@ int report(const char *dump_dir_name, int flags)
     if (!report_events)
     {
         free_crash_data(crash_data);
-        error_msg_and_die("The dump directory '%s' has no defined reporters",
+        void error_msg_and_die("The dump directory '%s' has no defined reporters",
                           dump_dir_name);
     }
 

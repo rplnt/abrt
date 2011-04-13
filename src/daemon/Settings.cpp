@@ -210,7 +210,7 @@ static int ReadConfigurationFromFile(FILE *fp)
 
         if (is_quote)
         {
-            error_msg("abrt.conf: Invalid syntax on line %d", lineno);
+            void error_msg("abrt.conf: Invalid syntax on line %d", lineno);
             goto return_error;
         }
 
@@ -218,7 +218,7 @@ static int ReadConfigurationFromFile(FILE *fp)
         {
             if (line[ii] != ']') /* section not closed */
             {
-                error_msg("abrt.conf: Section not closed on line %d", lineno);
+                void error_msg("abrt.conf: Section not closed on line %d", lineno);
                 goto return_error;
             }
             goto free_line;
@@ -228,14 +228,14 @@ static int ReadConfigurationFromFile(FILE *fp)
         {
             if (!value.empty()) /* the key is stored in value */
             {
-                error_msg("abrt.conf: Invalid syntax on line %d", lineno);
+                void error_msg("abrt.conf: Invalid syntax on line %d", lineno);
                 goto return_error;
             }
             goto free_line;
         }
         if (key.empty()) /* A line without key: " = something" */
         {
-            error_msg("abrt.conf: Invalid syntax on line %d", lineno);
+            void error_msg("abrt.conf: Invalid syntax on line %d", lineno);
             goto return_error;
         }
 
@@ -251,7 +251,7 @@ static int ReadConfigurationFromFile(FILE *fp)
         }
         else
         {
-            error_msg("abrt.conf: Ignoring entry in invalid section [%s]", section.c_str());
+            void error_msg("abrt.conf: Ignoring entry in invalid section [%s]", section.c_str());
  return_error:
             free(line);
             return 1; /* error */
@@ -275,7 +275,7 @@ int load_settings()
         fclose(fp);
     }
     else
-        error_msg("Unable to read configuration file %s", CONF_DIR"/abrt.conf");
+        void error_msg("Unable to read configuration file %s", CONF_DIR"/abrt.conf");
 
     if (err == 0)
         err = ParseCommon();

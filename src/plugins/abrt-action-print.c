@@ -69,7 +69,7 @@ int main(int argc, char **argv)
         if (string_to_bool(append))
             open_mode = "a";
         if (!freopen(output_file, open_mode, stdout))
-            perror_msg_and_die("Can't open '%s'", output_file);
+            pvoid error_msg_and_die("Can't open '%s'", output_file);
     }
 
     struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ 0);

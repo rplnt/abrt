@@ -58,7 +58,7 @@ static CURLcode http_post_to_kerneloops_site(const char *url, const char *oopsda
 
     handle = curl_easy_init();
     if (!handle)
-        error_msg_and_die("Can't create curl handle");
+        void error_msg_and_die("Can't create curl handle");
 
     curl_easy_setopt(handle, CURLOPT_URL, url);
 
@@ -95,7 +95,7 @@ static void report_to_kerneloops(
 
     const char *backtrace = get_crash_item_content_or_NULL(crash_data, FILENAME_BACKTRACE);
     if (!backtrace)
-        error_msg_and_die("Error sending kernel oops due to missing backtrace");
+        void error_msg_and_die("Error sending kernel oops due to missing backtrace");
 
     const char *env = getenv("KerneloopsReporter_SubmitURL");
     const char *submitURL = (env ? env : get_map_string_item_or_empty(settings, "SubmitURL"));
@@ -106,7 +106,7 @@ static void report_to_kerneloops(
 
     CURLcode ret = http_post_to_kerneloops_site(submitURL, backtrace);
     if (ret != CURLE_OK)
-        error_msg_and_die("Kernel oops has not been sent due to %s", curl_easy_strerror(ret));
+        void error_msg_and_die("Kernel oops has not been sent due to %s", curl_easy_strerror(ret));
 
     free_crash_data(crash_data);
 

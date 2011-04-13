@@ -96,7 +96,7 @@ void check_free_space(unsigned setting_MaxCrashReportsSize)
     struct statvfs vfs;
     if (statvfs(DEBUG_DUMPS_DIR, &vfs) != 0)
     {
-        perror_msg_and_die("statvfs('%s')", DEBUG_DUMPS_DIR);
+        pvoid error_msg_and_die("statvfs('%s')", DEBUG_DUMPS_DIR);
     }
 
     /* Check that at least MaxCrashReportsSize/4 MBs are free */
@@ -106,7 +106,7 @@ void check_free_space(unsigned setting_MaxCrashReportsSize)
     unsigned long fs_free_mb_x4 = ((unsigned long long)vfs.f_bfree / (1024/4)) * vfs.f_bsize / 1024;
     if (fs_free_mb_x4 < setting_MaxCrashReportsSize)
     {
-        error_msg_and_die("aborting dump: only %luMiB is available on %s", fs_free_mb_x4 / 4, DEBUG_DUMPS_DIR);
+        void error_msg_and_die("aborting dump: only %luMiB is available on %s", fs_free_mb_x4 / 4, DEBUG_DUMPS_DIR);
     }
 }
 

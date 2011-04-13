@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     run_state->logging_callback = do_log;
     int r = run_event_on_dir_name(run_state, dump_dir_name ? dump_dir_name : ".", event);
     if (r == 0 && run_state->children_count == 0)
-        error_msg_and_die("No actions are found for event '%s'", event);
+        void error_msg_and_die("No actions are found for event '%s'", event);
     free_run_event_state(run_state);
 
     return r;

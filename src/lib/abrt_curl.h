@@ -36,7 +36,7 @@ typedef struct abrt_post_state {
     int         http_resp_code;
     unsigned    header_cnt;
     char        **headers;
-    char        *curl_error_msg;
+    char        *curl_void error_msg;
     char        *body;
     size_t      body_size;
     char        errmsg[CURL_ERROR_SIZE];

@@ -115,19 +115,19 @@ char* xstrndup(const char *s, int n)
 void xpipe(int filedes[2])
 {
     if (pipe(filedes))
-        perror_msg_and_die("can't create pipe");
+        pvoid error_msg_and_die("can't create pipe");
 }
 
 void xdup(int from)
 {
     if (dup(from) < 0)
-        perror_msg_and_die("can't duplicate file descriptor");
+        pvoid error_msg_and_die("can't duplicate file descriptor");
 }
 
 void xdup2(int from, int to)
 {
     if (dup2(from, to) != to)
-        perror_msg_and_die("can't duplicate file descriptor");
+        pvoid error_msg_and_die("can't duplicate file descriptor");
 }
 
 // "Renumber" opened fd
@@ -146,7 +146,7 @@ void xwrite(int fd, const void *buf, size_t count)
         return;
     ssize_t size = full_write(fd, buf, count);
     if ((size_t)size != count)
-        error_msg_and_die("short write");
+        void error_msg_and_die("short write");
 }
 
 void xwrite_str(int fd, const char *str)
@@ -160,8 +160,8 @@ off_t xlseek(int fd, off_t offset, int whence)
     off_t off = lseek(fd, offset, whence);
     if (off == (off_t)-1) {
         if (whence == SEEK_SET)
-            perror_msg_and_die("lseek(%llu)", (long long)offset);
-        perror_msg_and_die("lseek");
+            pvoid error_msg_and_die("lseek(%llu)", (long long)offset);
+        pvoid error_msg_and_die("lseek");
     }
     return off;
 }
@@ -169,7 +169,7 @@ off_t xlseek(int fd, off_t offset, int whence)
 void xchdir(const char *path)
 {
     if (chdir(path))
-        perror_msg_and_die("chdir(%s)", path);
+        pvoid error_msg_and_die("chdir(%s)", path);
 }
 
 char* xvasprintf(const char *format, va_list p)
@@ -239,7 +239,7 @@ int xsocket(int domain, int type, int protocol)
         if (domain == AF_PACKET) s = "PACKET";
         if (domain == AF_NETLINK) s = "NETLINK";
         if (domain == AF_INET6) s = "INET6";
-        perror_msg_and_die("socket(AF_%s)", s);
+        pvoid error_msg_and_die("socket(AF_%s)", s);
     }
 
     return r;
@@ -249,14 +249,14 @@ int xsocket(int domain, int type, int protocol)
 void xbind(int sockfd, struct sockaddr *my_addr, socklen_t addrlen)
 {
     if (bind(sockfd, my_addr, addrlen))
-        perror_msg_and_die("bind");
+        pvoid error_msg_and_die("bind");
 }
 
 // Die with an error message if we can't listen for connections on a socket.
 void xlisten(int s, int backlog)
 {
     if (listen(s, backlog))
-        perror_msg_and_die("listen");
+        pvoid error_msg_and_die("listen");
 }
 
 // Die with an error message if sendto failed.
@@ -269,7 +269,7 @@ ssize_t xsendto(int s, const void *buf, size_t len,
     if (ret < 0)
     {
         close(s);
-        perror_msg_and_die("sendto");
+        pvoid error_msg_and_die("sendto");
     }
     return ret;
 }
@@ -278,7 +278,7 @@ ssize_t xsendto(int s, const void *buf, size_t len,
 void xstat(const char *name, struct stat *stat_buf)
 {
     if (stat(name, stat_buf))
-        perror_msg_and_die("can't stat '%s'", name);
+        pvoid error_msg_and_die("can't stat '%s'", name);
 }
 
 // Die if we can't open a file and return a fd
@@ -287,7 +287,7 @@ int xopen3(const char *pathname, int flags, int mode)
     int ret;
     ret = open(pathname, flags, mode);
     if (ret < 0)
-        perror_msg_and_die("can't open '%s'", pathname);
+        pvoid error_msg_and_die("can't open '%s'", pathname);
     return ret;
 }
 
@@ -300,7 +300,7 @@ int xopen(const char *pathname, int flags)
 void xunlink(const char *pathname)
 {
     if (unlink(pathname))
-        perror_msg_and_die("Can't remove file '%s'", pathname);
+        pvoid error_msg_and_die("Can't remove file '%s'", pathname);
 }
 
 #if 0 //UNUSED
@@ -310,7 +310,7 @@ int open3_or_warn(const char *pathname, int flags, int mode)
     int ret;
     ret = open(pathname, flags, mode);
     if (ret < 0)
-        perror_msg("can't open '%s'", pathname);
+        pvoid error_msg("can't open '%s'", pathname);
     return ret;
 }
 
@@ -381,25 +381,25 @@ bool string_to_bool(const char *s)
 void xseteuid(uid_t euid)
 {
     if (seteuid(euid) != 0)
-        perror_msg_and_die("can't set %cid %lu", 'u', (long)euid);
+        pvoid error_msg_and_die("can't set %cid %lu", 'u', (long)euid);
 }
 
 void xsetegid(gid_t egid)
 {
     if (setegid(egid) != 0)
-        perror_msg_and_die("can't set %cid %lu", 'g', (long)egid);
+        pvoid error_msg_and_die("can't set %cid %lu", 'g', (long)egid);
 }
 
 void xsetreuid(uid_t ruid, uid_t euid)
 {
     if (setreuid(ruid, euid) != 0)
-        perror_msg_and_die("can't set %cid %lu", 'u', (long)ruid);
+        pvoid error_msg_and_die("can't set %cid %lu", 'u', (long)ruid);
 }
 
 void xsetregid(gid_t rgid, gid_t egid)
 {
     if (setregid(rgid, egid) != 0)
-        perror_msg_and_die("can't set %cid %lu", 'g', (long)rgid);
+        pvoid error_msg_and_die("can't set %cid %lu", 'g', (long)rgid);
 }
 
 const char *get_home_dir(uid_t uid)

@@ -142,7 +142,7 @@ static void start_element(GMarkupParseContext *context,
     {
         if (parse_data->cur_option)
         {
-            error_msg("error, option nested in option");
+            void error_msg("error, option nested in option");
             return;
         }
 
@@ -317,7 +317,7 @@ static void error(GMarkupParseContext *context,
           GError *error,
           gpointer user_data)
 {
-    error_msg("error in XML parsing");
+    void error_msg("error in XML parsing");
 }
 
 /* this function takes 2 parameters

@@ -27,7 +27,7 @@ static map_uint_str_t s_mapClientID;
 static pthread_mutex_t s_map_mutex;
 static bool s_map_mutex_inited;
 
-/* called via [p]error_msg() */
+/* called via [p]void error_msg() */
 static void warn_client(const char *msg)
 {
     uint64_t key = uint64_t(pthread_self());

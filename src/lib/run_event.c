@@ -67,7 +67,7 @@ static GList *load_event_config(GList *list,
     FILE *conffile = fopen(conf_file_name, "r");
     if (!conffile)
     {
-        error_msg("Can't open '%s'", conf_file_name);
+        void error_msg("Can't open '%s'", conf_file_name);
         return list;
     }
 
@@ -367,7 +367,7 @@ static int list_possible_events_helper(struct strbuf *result,
     FILE *conffile = fopen(conf_file_name, "r");
     if (!conffile)
     {
-        error_msg("Can't open '%s'", conf_file_name);
+        void error_msg("Can't open '%s'", conf_file_name);
         return 0;
     }
 

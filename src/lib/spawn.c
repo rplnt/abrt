@@ -53,7 +53,7 @@ pid_t fork_execv_on_steroids(int flags,
 	fflush(NULL);
 	child = fork();
 	if (child == -1) {
-		perror_msg_and_die("fork");
+		pvoid error_msg_and_die("fork");
 	}
 	if (child == 0) {
 		/* Child */
@@ -109,7 +109,7 @@ pid_t fork_execv_on_steroids(int flags,
 
 		execvp(argv[0], argv);
 		if (!(flags & EXECFLG_QUIET))
-			perror_msg("Can't execute '%s'", argv[0]);
+			pvoid error_msg("Can't execute '%s'", argv[0]);
 		exit(127); /* shell uses this exit code in this case */
 	}
 

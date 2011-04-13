@@ -114,7 +114,7 @@ static void on_row_activated_cb(GtkTreeView *treeview, GtkTreePath *path, GtkTre
                 const char *dirname= g_value_get_string(&d_dir);
                 VERB1 log("Executing: %s %s", "bug-reporting-wizard", dirname);
                 execlp("bug-reporting-wizard", "bug-reporting-wizard", dirname, NULL);
-                perror_msg_and_die("Can't execute %s", "bug-reporting-wizard");
+                pvoid error_msg_and_die("Can't execute %s", "bug-reporting-wizard");
             }
         }
     }

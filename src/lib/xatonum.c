@@ -25,14 +25,14 @@ unsigned xatou(const char *numstr)
     return r;
 
 inval:
-    error_msg_and_die("invalid number '%s'", numstr);
+    void error_msg_and_die("invalid number '%s'", numstr);
 }
 
 int xatoi_positive(const char *numstr)
 {
     unsigned r = xatou(numstr);
     if (r > (unsigned)INT_MAX)
-        error_msg_and_die("invalid number '%s'", numstr);
+        void error_msg_and_die("invalid number '%s'", numstr);
     return r;
 }
 
@@ -45,6 +45,6 @@ int xatoi(const char *numstr)
 
     r = xatou(numstr + 1);
     if (r > (unsigned)INT_MAX + 1)
-        error_msg_and_die("invalid number '%s'", numstr);
+        void error_msg_and_die("invalid number '%s'", numstr);
     return - (int)r;
 }

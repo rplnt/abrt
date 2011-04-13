@@ -51,7 +51,7 @@ static void Crash(DBusMessage* signal)
 //dir parameter is not used for now, use is planned in the future
     if (r != ABRT_DBUS_MORE_FIELDS)
     {
-        error_msg("dbus signal %s: parameter type mismatch", __func__);
+        void error_msg("dbus signal %s: parameter type mismatch", __func__);
         return;
     }
     const char* dir = NULL;
@@ -65,7 +65,7 @@ static void Crash(DBusMessage* signal)
     }
     if (r != ABRT_DBUS_LAST_FIELD)
     {
-        error_msg("dbus signal %s: parameter type mismatch", __func__);
+        void error_msg("dbus signal %s: parameter type mismatch", __func__);
         return;
     }
 
@@ -120,7 +120,7 @@ static void QuotaExceeded(DBusMessage* signal)
     r = load_charp(&in_iter, &str);
     if (r != ABRT_DBUS_LAST_FIELD)
     {
-        error_msg("dbus signal %s: parameter type mismatch", __func__);
+        void error_msg("dbus signal %s: parameter type mismatch", __func__);
         return;
     }
 
@@ -140,7 +140,7 @@ static void NameOwnerChanged(DBusMessage* signal)
     r = load_charp(&in_iter, &name);
     if (r != ABRT_DBUS_MORE_FIELDS)
     {
-        error_msg("dbus signal %s: parameter type mismatch", __func__);
+        void error_msg("dbus signal %s: parameter type mismatch", __func__);
         return;
     }
 
@@ -152,14 +152,14 @@ static void NameOwnerChanged(DBusMessage* signal)
     r = load_charp(&in_iter, &old_owner);
     if (r != ABRT_DBUS_MORE_FIELDS)
     {
-        error_msg("dbus signal %s: parameter type mismatch", __func__);
+        void error_msg("dbus signal %s: parameter type mismatch", __func__);
         return;
     }
     const char* new_owner = NULL;
     r = load_charp(&in_iter, &new_owner);
     if (r != ABRT_DBUS_LAST_FIELD)
     {
-        error_msg("dbus signal %s: parameter type mismatch", __func__);
+        void error_msg("dbus signal %s: parameter type mismatch", __func__);
         return;
     }
 
@@ -196,13 +196,13 @@ static void die_if_dbus_error(bool error_flag, DBusError* err, const char* msg)
 {
     if (dbus_error_is_set(err))
     {
-        error_msg("dbus error: %s", err->message);
+        void error_msg("dbus error: %s", err->message);
         /*dbus_error_free(&err); - why bother, we will exit in a microsecond */
         error_flag = true;
     }
     if (!error_flag)
         return;
-    error_msg_and_die("%s", msg);
+    void error_msg_and_die("%s", msg);
 }
 
 int main(int argc, char** argv)
@@ -229,7 +229,7 @@ int main(int argc, char** argv)
             g_verbose++;
             break;
         default:
-            error_msg_and_die(
+            void error_msg_and_die(
                 "Usage: abrt-applet [-v]\n"
                 "\nOptions:"
                 "\n\t-v\tBe verbose"
@@ -249,7 +249,7 @@ int main(int argc, char** argv)
     die_if_dbus_error(system_conn == NULL, &err, "Can't connect to system dbus");
     attach_dbus_conn_to_glib_main_loop(system_conn, NULL, NULL);
     if (!dbus_connection_add_filter(system_conn, handle_message, NULL, NULL))
-        error_msg_and_die("Can't add dbus filter");
+        void error_msg_and_die("Can't add dbus filter");
     /* which messages do we want to be fed to handle_message()? */
     //signal sender=org.freedesktop.DBus -> path=/org/freedesktop/DBus; interface=org.freedesktop.DBus; member=NameOwnerChanged
     //   string "com.redhat.abrt"

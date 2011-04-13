@@ -71,7 +71,7 @@ static off_t full_fd_action(int src_fd, int dst_fd, off_t size, int flags)
 				if (lseek(dst_fd, -1, SEEK_CUR) < 0
 				 || safe_write(dst_fd, "", 1) != 1
 				) {
-					perror_msg("%s", msg_write_error);
+					pvoid error_msg("%s", msg_write_error);
 					break;
 				}
 			}
@@ -79,7 +79,7 @@ static off_t full_fd_action(int src_fd, int dst_fd, off_t size, int flags)
 			break;
 		}
 		if (rd < 0) {
-			perror_msg("%s", msg_read_error);
+			pvoid error_msg("%s", msg_read_error);
 			break;
 		}
 		/* dst_fd == -1 is a fake, else... */
@@ -99,7 +99,7 @@ static off_t full_fd_action(int src_fd, int dst_fd, off_t size, int flags)
                                 {
 				    ssize_t wr = full_write(dst_fd, buffer, rd);
 				    if (wr < rd) {
-				        perror_msg("%s", msg_write_error);
+				        pvoid error_msg("%s", msg_write_error);
 				        break;
 				    }
 				    last_was_seek = 0;
@@ -139,7 +139,7 @@ void copyfd_exact_size(int fd1, int fd2, off_t size)
 	if (sz == size)
 		return;
 	if (sz != -1)
-		error_msg_and_die("short read");
+		void error_msg_and_die("short read");
 	/* if sz == -1, copyfd_XX already complained */
 	xfunc_die();
 }
@@ -155,14 +155,14 @@ off_t copy_file(const char *src_name, const char *dst_name, int mode)
     int src = open(src_name, O_RDONLY);
     if (src < 0)
     {
-        perror_msg("Can't open '%s'", src_name);
+        pvoid error_msg("Can't open '%s'", src_name);
         return -1;
     }
     int dst = open(dst_name, O_WRONLY | O_TRUNC | O_CREAT, mode);
     if (dst < 0)
     {
         close(src);
-        perror_msg("Can't open '%s'", dst_name);
+        pvoid error_msg("Can't open '%s'", dst_name);
         return -1;
     }
     r = copyfd_eof(src, dst, /*flags:*/ 0);

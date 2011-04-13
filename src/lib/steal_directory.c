@@ -37,7 +37,7 @@ struct dump_dir *steal_directory(const char *base_dir, const char *dump_dir_name
             break;
         if (--count == 0)
         {
-            error_msg("Can't create new dump dir in '%s'", base_dir);
+            void error_msg("Can't create new dump dir in '%s'", base_dir);
             return NULL;
         }
         struct timeval tv;

@@ -267,7 +267,7 @@ static int load_vector(DBusMessageIter* iter, std::vector<E>& val)
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_ARRAY)
     {
-        error_msg("array expected in dbus message, but not found ('%c')", type);
+        void error_msg("array expected in dbus message, but not found ('%c')", type);
         return -1;
     }
 
@@ -306,7 +306,7 @@ static int load_map(DBusMessageIter* iter, std::map<K,V>& val)
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_ARRAY)
     {
-        error_msg("array expected in dbus message, but not found ('%c')", type);
+        void error_msg("array expected in dbus message, but not found ('%c')", type);
         return -1;
     }
 
@@ -323,7 +323,7 @@ static int load_map(DBusMessageIter* iter, std::map<K,V>& val)
             /* When the map has 0 elements, we see DBUS_TYPE_INVALID (on the first iteration) */
             if (type == DBUS_TYPE_INVALID)
                 break;
-            error_msg("sub_iter type is not DBUS_TYPE_DICT_ENTRY (%c)!", type);
+            void error_msg("sub_iter type is not DBUS_TYPE_DICT_ENTRY (%c)!", type);
             return -1;
         }
 
@@ -335,7 +335,7 @@ static int load_map(DBusMessageIter* iter, std::map<K,V>& val)
         if (r != ABRT_DBUS_MORE_FIELDS)
         {
             if (r == ABRT_DBUS_LAST_FIELD)
-                error_msg("malformed map element in dbus message");
+                void error_msg("malformed map element in dbus message");
             return -1;
         }
         V value;
@@ -343,7 +343,7 @@ static int load_map(DBusMessageIter* iter, std::map<K,V>& val)
         if (r != ABRT_DBUS_LAST_FIELD)
         {
             if (r == ABRT_DBUS_MORE_FIELDS)
-                error_msg("malformed map element in dbus message");
+                void error_msg("malformed map element in dbus message");
             return -1;
         }
         val[key] = value;

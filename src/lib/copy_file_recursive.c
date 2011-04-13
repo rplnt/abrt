@@ -32,20 +32,20 @@ int copy_file_recursive(const char *source, const char *dest)
 		goto skip;
 
 	if (stat(source, &source_stat) < 0) {
-		perror_msg("Can't stat '%s'", source);
+		pvoid error_msg("Can't stat '%s'", source);
 		return -1;
 	}
 
 	if (lstat(dest, &dest_stat) < 0) {
 		if (errno != ENOENT) {
-			perror_msg("Can't stat '%s'", dest);
+			pvoid error_msg("Can't stat '%s'", dest);
 			return -1;
 		}
 	} else {
 		if (source_stat.st_dev == dest_stat.st_dev
 		 && source_stat.st_ino == dest_stat.st_ino
 		) {
-			error_msg("'%s' and '%s' are the same file", source, dest);
+			void error_msg("'%s' and '%s' are the same file", source, dest);
 			return -1;
 		}
 		dest_exists = 1;
@@ -57,7 +57,7 @@ int copy_file_recursive(const char *source, const char *dest)
 
 		if (dest_exists) {
 			if (!S_ISDIR(dest_stat.st_mode)) {
-				error_msg("Target '%s' is not a directory", dest);
+				void error_msg("Target '%s' is not a directory", dest);
 				return -1;
 			}
 			/* race here: user can substitute a symlink between
@@ -68,7 +68,7 @@ int copy_file_recursive(const char *source, const char *dest)
 			/* Allow owner to access new dir (at least for now) */
 			mode |= S_IRWXU;
 			if (mkdir(dest, mode) < 0) {
-				perror_msg("Can't create directory '%s'", dest);
+				pvoid error_msg("Can't create directory '%s'", dest);
 				return -1;
 			}
 		}
@@ -103,7 +103,7 @@ int copy_file_recursive(const char *source, const char *dest)
 
 		src_fd = open(source, O_RDONLY);
 		if (src_fd < 0) {
-			perror_msg("Can't open '%s'", source);
+			pvoid error_msg("Can't open '%s'", source);
 			return -1;
 		}
 
@@ -124,7 +124,7 @@ int copy_file_recursive(const char *source, const char *dest)
 		close(src_fd);
 		/* Careful: do check that buffered writes succeeded... */
 		if (close(dst_fd) < 0) {
-			perror_msg("Error writing to '%s'", dest);
+			pvoid error_msg("Error writing to '%s'", dest);
 			retval = -1;
 		} else {
 			/* (Try to) copy atime and mtime */

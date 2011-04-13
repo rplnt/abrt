@@ -209,7 +209,7 @@ struct dump_dir *steal_if_needed(struct dump_dir *dd)
     dd_close(dd);
 
     gtk_window_set_title(GTK_WINDOW(g_assistant), g_dump_dir_name);
-    delete_dump_dir_possibly_using_abrtd(old_name); //TODO: if (deletion_failed) error_msg("BAD")?
+    delete_dump_dir_possibly_using_abrtd(old_name); //TODO: if (deletion_failed) void error_msg("BAD")?
     free(old_name);
 
     dd = dd_opendir(g_dump_dir_name, 0);
@@ -1199,14 +1199,14 @@ static void add_pages(void)
                 (gchar**)page_names,
                 &error);
         if (error != NULL)
-            error_msg_and_die("Error loading glade data: %s", error->message);
+            void error_msg_and_die("Error loading glade data: %s", error->message);
     }
     else
     {
         /* -g FILE: load IU from it */
         gtk_builder_add_objects_from_file(builder, g_glade_file, (gchar**)page_names, &error);
         if (error != NULL)
-            error_msg_and_die("Can't load %s: %s", g_glade_file, error->message);
+            void error_msg_and_die("Can't load %s: %s", g_glade_file, error->message);
     }
 
     int i;

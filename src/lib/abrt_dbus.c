@@ -257,7 +257,7 @@ void store_vector_of_crash_data(DBusMessageIter* iter, vector_of_crash_data_t *v
 //{
 //    int type = dbus_message_iter_get_arg_type(iter);
 //    if (type != DBUS_TYPE_BOOLEAN)
-//        error_msg_and_die("%s expected in dbus message, but not found ('%c')", "bool", type);
+//        void error_msg_and_die("%s expected in dbus message, but not found ('%c')", "bool", type);
 //    dbus_bool_t db;
 //    dbus_message_iter_get_basic(iter, &db);
 //    val = db;
@@ -268,7 +268,7 @@ int load_int32(DBusMessageIter* iter, int32_t *val)
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_INT32)
     {
-        error_msg("%s expected in dbus message, but not found ('%c')", "int32", type);
+        void error_msg("%s expected in dbus message, but not found ('%c')", "int32", type);
         return -1;
     }
     dbus_message_iter_get_basic(iter, val);
@@ -279,7 +279,7 @@ int load_uint32(DBusMessageIter* iter, uint32_t *val)
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_UINT32)
     {
-        error_msg("%s expected in dbus message, but not found ('%c')", "uint32", type);
+        void error_msg("%s expected in dbus message, but not found ('%c')", "uint32", type);
         return -1;
     }
     dbus_message_iter_get_basic(iter, val);
@@ -290,7 +290,7 @@ int load_int64(DBusMessageIter* iter, int64_t *val)
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_INT64)
     {
-        error_msg("%s expected in dbus message, but not found ('%c')", "int64", type);
+        void error_msg("%s expected in dbus message, but not found ('%c')", "int64", type);
         return -1;
     }
     dbus_message_iter_get_basic(iter, val);
@@ -301,7 +301,7 @@ int load_uint64(DBusMessageIter* iter, uint64_t *val)
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_UINT64)
     {
-        error_msg("%s expected in dbus message, but not found ('%c')", "uint64", type);
+        void error_msg("%s expected in dbus message, but not found ('%c')", "uint64", type);
         return -1;
     }
     dbus_message_iter_get_basic(iter, val);
@@ -314,7 +314,7 @@ int load_charp(DBusMessageIter* iter, const char** val)
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_STRING)
     {
-        error_msg("%s expected in dbus message, but not found ('%c')", "string", type);
+        void error_msg("%s expected in dbus message, but not found ('%c')", "string", type);
         return -1;
     }
     dbus_message_iter_get_basic(iter, val);
@@ -329,7 +329,7 @@ static int load_crash_item(DBusMessageIter* iter, struct crash_item *item)
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_ARRAY)
     {
-        error_msg("array expected in dbus message, but not found ('%c')", type);
+        void error_msg("array expected in dbus message, but not found ('%c')", type);
         return -1;
     }
 
@@ -346,21 +346,21 @@ static int load_crash_item(DBusMessageIter* iter, struct crash_item *item)
     int r = load_charp(&sub_iter, &typestr);
     if (r != ABRT_DBUS_MORE_FIELDS)
     {
-        error_msg("malformed crash_item element in dbus message");
+        void error_msg("malformed crash_item element in dbus message");
         return -1;
     }
     const char *editable;
     r = load_charp(&sub_iter, &editable);
     if (r != ABRT_DBUS_MORE_FIELDS)
     {
-        error_msg("malformed crash_item element in dbus message");
+        void error_msg("malformed crash_item element in dbus message");
         return -1;
     }
     const char *content;
     r = load_charp(&sub_iter, &content);
     if (r != ABRT_DBUS_LAST_FIELD)
     {
-        error_msg("malformed crash_item element in dbus message");
+        void error_msg("malformed crash_item element in dbus message");
         return -1;
     }
     item->flags = 0;
@@ -378,7 +378,7 @@ int load_crash_data(DBusMessageIter* iter, crash_data_t **val)
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_ARRAY)
     {
-        error_msg("array expected in dbus message, but not found ('%c')", type);
+        void error_msg("array expected in dbus message, but not found ('%c')", type);
         return -1;
     }
 
@@ -397,7 +397,7 @@ int load_crash_data(DBusMessageIter* iter, crash_data_t **val)
             /* When the map has 0 elements, we see DBUS_TYPE_INVALID (on the first iteration) */
             if (type == DBUS_TYPE_INVALID)
                 break;
-            error_msg("sub_iter type is not DBUS_TYPE_DICT_ENTRY (%c)!", type);
+            void error_msg("sub_iter type is not DBUS_TYPE_DICT_ENTRY (%c)!", type);
             free_crash_data(result);
             return -1;
         }
@@ -410,7 +410,7 @@ int load_crash_data(DBusMessageIter* iter, crash_data_t **val)
         if (r != ABRT_DBUS_MORE_FIELDS)
         {
             if (r == ABRT_DBUS_LAST_FIELD)
-                error_msg("malformed map element in dbus message");
+                void error_msg("malformed map element in dbus message");
             free_crash_data(result);
             return -1;
         }
@@ -419,7 +419,7 @@ int load_crash_data(DBusMessageIter* iter, crash_data_t **val)
         if (r != ABRT_DBUS_LAST_FIELD)
         {
             if (r == ABRT_DBUS_MORE_FIELDS)
-                error_msg("malformed map element in dbus message");
+                void error_msg("malformed map element in dbus message");
             free(value);
             free_crash_data(result);
             return -1;
@@ -440,7 +440,7 @@ int load_vector_of_crash_data(DBusMessageIter* iter, vector_of_crash_data_t **va
     int type = dbus_message_iter_get_arg_type(iter);
     if (type != DBUS_TYPE_ARRAY)
     {
-        error_msg("array expected in dbus message, but not found ('%c')", type);
+        void error_msg("array expected in dbus message, but not found ('%c')", type);
         return -1;
     }
 
@@ -589,7 +589,7 @@ static void remove_timeout(DBusTimeout *timeout, void* data)
 static void timeout_toggled(DBusTimeout *timeout, void* data)
 {
 //seems to be never called, let's make it noisy
-    error_msg_and_die("%s(): FIXME: some dbus machinery is missing here", __func__);
+    void error_msg_and_die("%s(): FIXME: some dbus machinery is missing here", __func__);
 }
 
 /* Callback: "DBusObjectPathVTable is unregistered (or its connection is freed)" */
@@ -607,12 +607,12 @@ int log_dbus_error(const char *msg, DBusError *err)
     int ret = 0;
     if (dbus_error_is_set(err))
     {
-        error_msg("dbus error: %s", err->message);
+        void error_msg("dbus error: %s", err->message);
         ret = 1;
     }
     if (msg)
     {
-        error_msg(msg);
+        void error_msg(msg);
         ret = 1;
     }
     return ret;
@@ -643,7 +643,7 @@ void attach_dbus_conn_to_glib_main_loop(DBusConnection* conn,
         DBusHandlerResult (*message_received_func)(DBusConnection *conn, DBusMessage *msg, void* data)
 ) {
     if (g_dbus_conn)
-        error_msg_and_die("Internal bug: can't connect to more than one dbus");
+        void error_msg_and_die("Internal bug: can't connect to more than one dbus");
     g_dbus_conn = conn;
 
 //do we need this? why?
@@ -713,7 +713,7 @@ static DBusMessage* send_get_reply_and_unref(DBusMessage* msg)
 {
     dbus_uint32_t serial;
     if (TRUE != dbus_connection_send(g_dbus_conn, msg, &serial))
-        error_msg_and_die("Error sending DBus message");
+        void error_msg_and_die("Error sending DBus message");
     dbus_message_unref(msg);
 
     while (true)
@@ -722,7 +722,7 @@ static DBusMessage* send_get_reply_and_unref(DBusMessage* msg)
         if (!received)
         {
             if (FALSE == dbus_connection_read_write(g_dbus_conn, -1))
-                error_msg_and_die("dbus connection closed");
+                void error_msg_and_die("dbus connection closed");
             continue;
         }
 
@@ -765,7 +765,7 @@ static DBusMessage* send_get_reply_and_unref(DBusMessage* msg)
                                    DBUS_TYPE_STRING, &update_msg,
                                    DBUS_TYPE_INVALID))
             {
-                error_msg_and_die("dbus Update message: arguments mismatch");
+                void error_msg_and_die("dbus Update message: arguments mismatch");
             }
             printf(">> %s\n", update_msg);
         }
@@ -776,7 +776,7 @@ static DBusMessage* send_get_reply_and_unref(DBusMessage* msg)
                                    DBUS_TYPE_STRING, &warning_msg,
                                    DBUS_TYPE_INVALID))
             {
-                error_msg_and_die("dbus Warning message: arguments mismatch");
+                void error_msg_and_die("dbus Warning message: arguments mismatch");
             }
             log(">! %s", warning_msg);
         }
@@ -790,7 +790,7 @@ static DBusMessage* send_get_reply_and_unref(DBusMessage* msg)
         if (tp == DBUS_MESSAGE_TYPE_ERROR
          && dbus_message_get_reply_serial(received) == serial
         ) {
-            error_msg_and_die("dbus call returned error: '%s'", error_str);
+            void error_msg_and_die("dbus call returned error: '%s'", error_str);
         }
 
         dbus_message_unref(received);
@@ -812,7 +812,7 @@ int32_t call_DeleteDebugDump(const char *dump_dir_name)
     int32_t result;
     int r = load_int32(&in_iter, &result);
     if (r != ABRT_DBUS_LAST_FIELD) /* more values present, or bad type */
-        error_msg_and_die("dbus call %s: return type mismatch", __func__ + 5);
+        void error_msg_and_die("dbus call %s: return type mismatch", __func__ + 5);
 
     dbus_message_unref(reply);
     return result;
@@ -839,9 +839,9 @@ static int connect_to_abrtd_and_call_DeleteDebugDump(const char *dump_dir_name)
 
     int ret = call_DeleteDebugDump(dump_dir_name);
     if (ret == ENOENT)
-        error_msg("Dump directory '%s' is not found", dump_dir_name);
+        void error_msg("Dump directory '%s' is not found", dump_dir_name);
     else if (ret != 0)
-        error_msg("Can't delete dump directory '%s'", dump_dir_name);
+        void error_msg("Can't delete dump directory '%s'", dump_dir_name);
 
     dbus_connection_unref(g_dbus_conn);
     g_dbus_conn = NULL;

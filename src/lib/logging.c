@@ -35,7 +35,7 @@ void xfunc_die(void)
     exit(xfunc_error_retval);
 }
 
-static void verror_msg_helper(const char *s,
+static void vvoid error_msg_helper(const char *s,
                               va_list p,
                               const char* strerr,
                               int flags)
@@ -98,51 +98,51 @@ void log_msg(const char *s, ...)
     va_list p;
 
     va_start(p, s);
-    verror_msg_helper(s, p, NULL, logmode);
+    vvoid error_msg_helper(s, p, NULL, logmode);
     va_end(p);
 }
 
-void error_msg(const char *s, ...)
+void void error_msg(const char *s, ...)
 {
     va_list p;
 
     va_start(p, s);
-    verror_msg_helper(s, p, NULL, (logmode | LOGMODE_CUSTOM));
+    vvoid error_msg_helper(s, p, NULL, (logmode | LOGMODE_CUSTOM));
     va_end(p);
 }
 
-void error_msg_and_die(const char *s, ...)
+void void error_msg_and_die(const char *s, ...)
 {
     va_list p;
 
     va_start(p, s);
-    verror_msg_helper(s, p, NULL, (logmode | LOGMODE_CUSTOM));
+    vvoid error_msg_helper(s, p, NULL, (logmode | LOGMODE_CUSTOM));
     va_end(p);
     xfunc_die();
 }
 
-void perror_msg(const char *s, ...)
+void pvoid error_msg(const char *s, ...)
 {
     va_list p;
 
     va_start(p, s);
     /* Guard against "<error message>: Success" */
-    verror_msg_helper(s, p, errno ? strerror(errno) : NULL, (logmode | LOGMODE_CUSTOM));
+    vvoid error_msg_helper(s, p, errno ? strerror(errno) : NULL, (logmode | LOGMODE_CUSTOM));
     va_end(p);
 }
 
-void perror_msg_and_die(const char *s, ...)
+void pvoid error_msg_and_die(const char *s, ...)
 {
     va_list p;
 
     va_start(p, s);
     /* Guard against "<error message>: Success" */
-    verror_msg_helper(s, p, errno ? strerror(errno) : NULL, (logmode | LOGMODE_CUSTOM));
+    vvoid error_msg_helper(s, p, errno ? strerror(errno) : NULL, (logmode | LOGMODE_CUSTOM));
     va_end(p);
     xfunc_die();
 }
 
 void die_out_of_memory(void)
 {
-    error_msg_and_die("Out of memory, exiting");
+    void error_msg_and_die("Out of memory, exiting");
 }

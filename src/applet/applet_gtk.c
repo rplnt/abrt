@@ -58,7 +58,7 @@ static bool load_icons(struct applet *applet)
             applet->ap_icon_stages_buff[stage] = gdk_pixbuf_new_from_file(name, &error);
             if (error != NULL)
             {
-                error_msg("Can't load pixbuf from %s, animation is disabled", name);
+                void error_msg("Can't load pixbuf from %s, animation is disabled", name);
                 return false;
             }
         }
@@ -87,7 +87,7 @@ static void action_report(NotifyNotification *notification, gchar *action, gpoin
     {
         pid_t pid = vfork();
         if (pid < 0)
-            perror_msg("vfork");
+            pvoid error_msg("vfork");
         if (pid == 0)
         { /* child */
             signal(SIGCHLD, SIG_DFL); /* undo SIG_IGN in abrt-applet */
@@ -97,13 +97,13 @@ static void action_report(NotifyNotification *notification, gchar *action, gpoin
             /* Trying to find it in PATH */
             execlp("bug-reporting-wizard", "bug-reporting-wizard",
                    applet->ap_last_crash_id, (char*) NULL);
-            perror_msg_and_die("Can't execute abrt-gui");
+            pvoid error_msg_and_die("Can't execute abrt-gui");
         }
         GError *err = NULL;
         notify_notification_close(notification, &err);
         if (err != NULL)
         {
-            error_msg("%s", err->message);
+            void error_msg("%s", err->message);
             g_error_free(err);
         }
         hide_icon(applet);
@@ -119,7 +119,7 @@ static void action_open_gui(NotifyNotification *notification, gchar *action, gpo
     {
         pid_t pid = vfork();
         if (pid < 0)
-            perror_msg("vfork");
+            pvoid error_msg("vfork");
         if (pid == 0)
         { /* child */
             signal(SIGCHLD, SIG_DFL); /* undo SIG_IGN in abrt-applet */
@@ -127,13 +127,13 @@ static void action_open_gui(NotifyNotification *notification, gchar *action, gpo
             /* Did not find abrt-gui in installation directory. Oh well */
             /* Trying to find it in PATH */
             execlp("abrt-gui", "abrt-gui", (char*) NULL);
-            perror_msg_and_die("Can't execute abrt-gui");
+            pvoid error_msg_and_die("Can't execute abrt-gui");
         }
         GError *err = NULL;
         notify_notification_close(notification, &err);
         if (err != NULL)
         {
-            error_msg("%s", err->message);
+            void error_msg("%s", err->message);
             g_error_free(err);
         }
         hide_icon(applet);
@@ -309,7 +309,7 @@ static void on_applet_activate_cb(GtkStatusIcon *status_icon, gpointer user_data
     {
         pid_t pid = vfork();
         if (pid < 0)
-            perror_msg("vfork");
+            pvoid error_msg("vfork");
         if (pid == 0)
         { /* child */
             signal(SIGCHLD, SIG_DFL); /* undo SIG_IGN in abrt-applet */
@@ -317,7 +317,7 @@ static void on_applet_activate_cb(GtkStatusIcon *status_icon, gpointer user_data
             /* Did not find abrt-gui in installation directory. Oh well */
             /* Trying to find it in PATH */
             execlp("abrt-gui", "abrt-gui", (char*) NULL);
-            perror_msg_and_die("Can't execute abrt-gui");
+            pvoid error_msg_and_die("Can't execute abrt-gui");
         }
         hide_icon(applet);
         stop_animate_icon(applet);
@@ -408,7 +408,7 @@ void show_crash_notification(struct applet *applet, const char* crash_dir, const
     notify_notification_show(notification, &err);
     if (err != NULL)
     {
-        error_msg("%s", err->message);
+        void error_msg("%s", err->message);
         g_error_free(err);
     }
 }
@@ -435,7 +435,7 @@ void show_msg_notification(struct applet *applet, const char *format, ...)
     notify_notification_show(notification, &err);
     if (err != NULL)
     {
-        error_msg("%s", err->message);
+        void error_msg("%s", err->message);
         g_error_free(err);
     }
 }

@@ -41,7 +41,7 @@ static void exec_and_feed_input(const char* text, char **args)
     int status;
     waitpid(child, &status, 0); /* wait for command completion */
     if (status != 0)
-        error_msg_and_die("Error running '%s'", args[0]);
+        void error_msg_and_die("Error running '%s'", args[0]);
 }
 
 static char** append_str_to_vector(char **vec, unsigned *size_p, const char *str)

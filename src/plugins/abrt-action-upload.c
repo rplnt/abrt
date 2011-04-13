@@ -56,7 +56,7 @@ static int send_file(const char *url, const char *filename)
     FILE *fp = fopen(filename, "r");
     if (!fp)
     {
-        perror_msg("Can't open '%s'", filename);
+        pvoid error_msg("Can't open '%s'", filename);
         return 1;
     }
 
@@ -69,7 +69,7 @@ static int send_file(const char *url, const char *filename)
     CURL *curl = curl_easy_init();
     if (!curl)
     {
-        error_msg_and_die("Can't create curl handle");
+        void error_msg_and_die("Can't create curl handle");
     }
     /* Buffer[CURL_ERROR_SIZE] curl stores human readable error messages in.
      * This may be more helpful than just return code from curl_easy_perform.
@@ -90,7 +90,7 @@ static int send_file(const char *url, const char *filename)
     free(whole_url);
     fclose(fp);
     if (result != 0)
-        error_msg("Error while uploading: '%s'", curl_easy_strerror(result));
+        void error_msg("Error while uploading: '%s'", curl_easy_strerror(result));
     else
         /* This ends up a "reporting status message" in abrtd */
         log(_("Successfully sent %s to %s"), filename, url);
@@ -139,7 +139,7 @@ static int create_and_upload_archive(
         xmove_fd(pipe_from_parent_to_child[0], 0);
         xmove_fd(xopen3(tempfile, O_WRONLY | O_CREAT | O_EXCL, 0600), 1);
         execlp("gzip", "gzip", NULL);
-        perror_msg_and_die("can't execute '%s'", "gzip");
+        pvoid error_msg_and_die("can't execute '%s'", "gzip");
     }
     close(pipe_from_parent_to_child[0]);
 
@@ -225,7 +225,7 @@ static int create_and_upload_archive(
         free(tempfile);
     }
     if (errmsg)
-        error_msg_and_die("%s", errmsg);
+        void error_msg_and_die("%s", errmsg);
 
     return result;
 }

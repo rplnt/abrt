@@ -27,7 +27,7 @@ CURL* xcurl_easy_init()
     CURL* curl = curl_easy_init();
     if (!curl)
     {
-        error_msg_and_die("Can't create curl handle");
+        void error_msg_and_die("Can't create curl handle");
     }
     return curl;
 }
@@ -45,7 +45,7 @@ die_if_curl_error(CURLcode err)
 {
     if (err) {
         char *msg = check_curl_error(err, "curl");
-        error_msg_and_die("%s", msg);
+        void error_msg_and_die("%s", msg);
     }
 }
 
@@ -55,7 +55,7 @@ xcurl_easy_setopt_ptr(CURL *handle, CURLoption option, const void *parameter)
     CURLcode err = curl_easy_setopt(handle, option, parameter);
     if (err) {
         char *msg = check_curl_error(err, "curl");
-        error_msg_and_die("%s", msg);
+        void error_msg_and_die("%s", msg);
     }
 }
 static inline void
@@ -84,7 +84,7 @@ void free_abrt_post_state(abrt_post_state_t *state)
             free(*headers++);
         free(state->headers);
     }
-    free(state->curl_error_msg);
+    free(state->curl_void error_msg);
     free(state->body);
     free(state);
 }
@@ -236,7 +236,7 @@ abrt_post(abrt_post_state_t *state,
         data_file = fopen(data, "r");
         if (!data_file)
 //FIXME:
-            perror_msg_and_die("can't open '%s'", data);
+            pvoid error_msg_and_die("can't open '%s'", data);
         xcurl_easy_setopt_ptr(handle, CURLOPT_READDATA, data_file);
         // Want to use custom read function
         xcurl_easy_setopt_ptr(handle, CURLOPT_READFUNCTION, (const void*)fread_with_reporting);
@@ -257,7 +257,7 @@ abrt_post(abrt_post_state_t *state,
         data_file = fopen(data, "r");
         if (!data_file)
 //FIXME:
-            perror_msg_and_die("can't open '%s'", data);
+            pvoid error_msg_and_die("can't open '%s'", data);
         // Want to use custom read function
         xcurl_easy_setopt_ptr(handle, CURLOPT_READFUNCTION, (const void*)fread_with_reporting);
         // Need to know file size
@@ -276,7 +276,7 @@ abrt_post(abrt_post_state_t *state,
 #endif
         if (curlform_err != 0)
 //FIXME:
-            error_msg_and_die("out of memory or read error (curl_formadd error code: %d)", (int)curlform_err);
+            void error_msg_and_die("out of memory or read error (curl_formadd error code: %d)", (int)curlform_err);
         xcurl_easy_setopt_ptr(handle, CURLOPT_HTTPPOST, post);
     } else {
         // .. from a blob in memory
@@ -297,7 +297,7 @@ abrt_post(abrt_post_state_t *state,
         // Note: curl_slist_append() copies content_type_header
         httpheader_list = curl_slist_append(httpheader_list, content_type_header);
         if (!httpheader_list)
-            error_msg_and_die("out of memory");
+            void error_msg_and_die("out of memory");
         free(content_type_header);
         xcurl_easy_setopt_ptr(handle, CURLOPT_HTTPHEADER, httpheader_list);
     }
@@ -306,12 +306,12 @@ abrt_post(abrt_post_state_t *state,
     // error messages in the body of HTTP error responses [not verified to work]
     httpheader_list = curl_slist_append(httpheader_list, "Accept: text/plain");
     if (!httpheader_list)
-        error_msg_and_die("out of memory");
+        void error_msg_and_die("out of memory");
 
     // Add User-Agent: ABRT/N.M
     httpheader_list = curl_slist_append(httpheader_list, "User-Agent: ABRT/"VERSION);
     if (!httpheader_list)
-        error_msg_and_die("out of memory");
+        void error_msg_and_die("out of memory");
 
 // Disabled: was observed to also handle "305 Use proxy" redirect,
 // apparently with POST->GET remapping - which server didn't like at all.
@@ -344,7 +344,7 @@ abrt_post(abrt_post_state_t *state,
     {
         body_stream = open_memstream(&state->body, &state->body_size);
         if (!body_stream)
-            error_msg_and_die("out of memory");
+            void error_msg_and_die("out of memory");
         xcurl_easy_setopt_ptr(handle, CURLOPT_WRITEDATA, body_stream);
     }
     if (!(state->flags & ABRT_POST_WANT_SSL_VERIFY))
@@ -361,8 +361,8 @@ abrt_post(abrt_post_state_t *state,
         VERB2 log("curl_easy_perform: error %d", (int)curl_err);
         if (state->flags & ABRT_POST_WANT_ERROR_MSG)
         {
-            state->curl_error_msg = check_curl_error(curl_err, "curl_easy_perform");
-            VERB3 log("curl_easy_perform: error_msg: %s", state->curl_error_msg);
+            state->curl_void error_msg = check_curl_error(curl_err, "curl_easy_perform");
+            VERB3 log("curl_easy_perform: void error_msg: %s", state->curl_void error_msg);
         }
         goto ret;
     }

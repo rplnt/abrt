@@ -33,11 +33,11 @@ void set_client_name(const char* name);
 /*
  * Ask a client to warn the user about a non-fatal, but unexpected condition.
  * In GUI, it will usually be presented as a popup message.
- * Usually there is no need to call it directly, just use [p]error_msg().
+ * Usually there is no need to call it directly, just use [p]void error_msg().
  */
 //now static:
 //void warn_client(const char *msg);
-//use [p]error_msg[_and_die] instead, it sends the message as a warning to client
+//use [p]void error_msg[_and_die] instead, it sends the message as a warning to client
 //as well as to the log.
 
 /*

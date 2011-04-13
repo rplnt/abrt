@@ -51,7 +51,7 @@ static void send_flush_and_unref(DBusMessage* msg)
         return;
     }
     if (!dbus_connection_send(g_dbus_conn, msg, NULL /* &serial */))
-        error_msg_and_die("Error sending DBus message");
+        void error_msg_and_die("Error sending DBus message");
     dbus_connection_flush(g_dbus_conn);
     VERB3 log("DBus message sent");
     dbus_message_unref(msg);
@@ -134,7 +134,7 @@ static long get_remote_uid(DBusMessage* call, const char** ppSender = NULL)
     if (dbus_error_is_set(&err))
     {
         dbus_error_free(&err);
-        error_msg("Can't determine remote uid, assuming 0");
+        void error_msg("Can't determine remote uid, assuming 0");
         return 0;
     }
     return uid;
@@ -163,14 +163,14 @@ static int handle_StartJob(DBusMessage* call, DBusMessage* reply)
     r = load_val(&in_iter, crash_id);
     if (r != ABRT_DBUS_MORE_FIELDS)
     {
-        error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
+        void error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
         return -1;
     }
     int32_t force;
     r = load_val(&in_iter, force);
     if (r != ABRT_DBUS_LAST_FIELD)
     {
-        error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
+        void error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
         return -1;
     }
 
@@ -192,7 +192,7 @@ static int handle_CreateReport(DBusMessage* call, DBusMessage* reply)
     r = load_val(&in_iter, crash_id);
     if (r != ABRT_DBUS_LAST_FIELD)
     {
-        error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
+        void error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
         return -1;
     }
 
@@ -225,7 +225,7 @@ static int handle_Report(DBusMessage* call, DBusMessage* reply)
     r = load_crash_data(&in_iter, &crash_data);
     if (r != ABRT_DBUS_MORE_FIELDS)
     {
-        error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
+        void error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
         r = -1;
         goto ret;
     }
@@ -250,7 +250,7 @@ static int handle_Report(DBusMessage* call, DBusMessage* reply)
     r = load_val(&in_iter, events);
     if (r == ABRT_DBUS_ERROR)
     {
-        error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
+        void error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
         r = -1;
         goto ret;
     }
@@ -261,7 +261,7 @@ static int handle_Report(DBusMessage* call, DBusMessage* reply)
         r = load_val(&in_iter, user_conf_data);
         if (r != ABRT_DBUS_LAST_FIELD)
         {
-            error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
+            void error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
             r = -1;
             goto ret;
         }
@@ -290,7 +290,7 @@ static int handle_DeleteDebugDump(DBusMessage* call, DBusMessage* reply)
     r = load_val(&in_iter, crash_id);
     if (r != ABRT_DBUS_LAST_FIELD)
     {
-        error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
+        void error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
         return -1;
     }
 
@@ -326,7 +326,7 @@ static int handle_GetSettings(DBusMessage* call, DBusMessage* reply)
 //    r = load_val(&in_iter, param1);
 //    if (r != ABRT_DBUS_LAST_FIELD)
 //    {
-//        error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
+//        void error_msg("dbus call %s: parameter type mismatch", __func__ + 7);
 //        return -1;
 //    }
 //
@@ -401,13 +401,13 @@ static void handle_dbus_err(bool error_flag, DBusError *err)
 {
     if (dbus_error_is_set(err))
     {
-        error_msg("dbus error: %s", err->message);
+        void error_msg("dbus error: %s", err->message);
         /* dbus_error_free(&err); */
         error_flag = true;
     }
     if (!error_flag)
         return;
-    error_msg_and_die(
+    void error_msg_and_die(
             "Error requesting DBus name %s, possible reasons: "
             "abrt run by non-root; dbus config is incorrect; "
             "or dbus daemon needs to be restarted to reload dbus config",

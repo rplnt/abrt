@@ -116,7 +116,7 @@ static void create_debug_dump()
     struct dump_dir *dd = dd_create(path, client_uid, 0640);
     if (!dd)
     {
-        error_msg_and_die("Error creating crash dump %s", path);
+        void error_msg_and_die("Error creating crash dump %s", path);
     }
     dd_create_basic_files(dd, client_uid);
 
@@ -193,13 +193,13 @@ static char *try_to_get_string(const char *message,
     if ((printable && !printable_str(contents))
      || (!allow_slashes && strchr(contents, '/'))
     ) {
-        error_msg("Received %s contains invalid characters, skipping", tag);
+        void error_msg("Received %s contains invalid characters, skipping", tag);
         return NULL;
     }
 
     if (strlen(contents) > max_len)
     {
-        error_msg("Received %s too long, trimming to %lu", tag, (long)max_len);
+        void error_msg("Received %s too long, trimming to %lu", tag, (long)max_len);
     }
 
     return xstrndup(contents, max_len);
@@ -248,7 +248,7 @@ static void process_message(const char *message)
         pid = xatou(message + strlen("PID="));
         if (pid < 1)
             /* pid == 0 is error, the lowest PID is 1. */
-            error_msg_and_die("Malformed or out-of-range number: '%s'", message + strlen("PID="));
+            void error_msg_and_die("Malformed or out-of-range number: '%s'", message + strlen("PID="));
         VERB3 log("Saved PID %u", pid);
         return;
     }
@@ -259,7 +259,7 @@ static void process_message(const char *message)
         if (!pid || !backtrace || !executable
          || !analyzer || !dir_basename || !reason
         ) {
-            error_msg_and_die("Got DONE, but some data are missing. Aborting");
+            void error_msg_and_die("Got DONE, but some data are missing. Aborting");
         }
 
         /* Write out the crash dump. Don't let alarm to interrupt here */
@@ -328,9 +328,9 @@ int main(int argc, char **argv)
         struct ucred cr;
         socklen_t crlen = sizeof(cr);
         if (0 != getsockopt(STDIN_FILENO, SOL_SOCKET, SO_PEERCRED, &cr, &crlen))
-            perror_msg_and_die("getsockopt(SO_PEERCRED)");
+            pvoid error_msg_and_die("getsockopt(SO_PEERCRED)");
         if (crlen != sizeof(cr))
-            error_msg_and_die("%s: bad crlen %d", "getsockopt(SO_PEERCRED)", (int)crlen);
+            void error_msg_and_die("%s: bad crlen %d", "getsockopt(SO_PEERCRED)", (int)crlen);
         client_uid = cr.uid;
     }
 
@@ -342,8 +342,8 @@ int main(int argc, char **argv)
         if (rd < 0)
         {
             if (errno == EINTR) /* SIGALRM? */
-                error_msg_and_die("Timed out");
-            perror_msg_and_die("read");
+                void error_msg_and_die("Timed out");
+            pvoid error_msg_and_die("read");
         }
         if (rd == 0)
             break;
@@ -352,7 +352,7 @@ int main(int argc, char **argv)
         messagebuf_len += rd;
         total_bytes_read += rd;
         if (total_bytes_read > MAX_MESSAGE_SIZE)
-            error_msg_and_die("Message is too long, aborting");
+            void error_msg_and_die("Message is too long, aborting");
 
         while (1)
         {

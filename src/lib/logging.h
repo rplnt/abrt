@@ -71,16 +71,16 @@ void log_msg(const char *s, ...) __attribute__ ((format (printf, 1, 2)));
 /* It's a macro, not function, since it collides with log() from math.h */
 #undef log
 #define log(...) log_msg(__VA_ARGS__)
-/* error_msg family will use g_custom_logger. log_msg does not. */
-#define error_msg abrt_error_msg
-void error_msg(const char *s, ...) __attribute__ ((format (printf, 1, 2)));
-#define error_msg_and_die abrt_error_msg_and_die
-void error_msg_and_die(const char *s, ...) __attribute__ ((noreturn, format (printf, 1, 2)));
+/* void error_msg family will use g_custom_logger. log_msg does not. */
+#define void error_msg abrt_void error_msg
+void void error_msg(const char *s, ...) __attribute__ ((format (printf, 1, 2)));
+#define void error_msg_and_die abrt_void error_msg_and_die
+void void error_msg_and_die(const char *s, ...) __attribute__ ((noreturn, format (printf, 1, 2)));
 /* Reports error message with libc's errno error description attached. */
-#define perror_msg abrt_perror_msg
-void perror_msg(const char *s, ...) __attribute__ ((format (printf, 1, 2)));
-#define perror_msg_and_die abrt_perror_msg_and_die
-void perror_msg_and_die(const char *s, ...) __attribute__ ((noreturn, format (printf, 1, 2)));
+#define pvoid error_msg abrt_pvoid error_msg
+void pvoid error_msg(const char *s, ...) __attribute__ ((format (printf, 1, 2)));
+#define pvoid error_msg_and_die abrt_pvoid error_msg_and_die
+void pvoid error_msg_and_die(const char *s, ...) __attribute__ ((noreturn, format (printf, 1, 2)));
 #define die_out_of_memory abrt_die_out_of_memory
 void die_out_of_memory(void) NORETURN;
 

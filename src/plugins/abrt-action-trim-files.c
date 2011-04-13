@@ -101,7 +101,7 @@ static const char *parse_size_pfx(double *size, const char *str)
     }
 
     if (errno || end == str || *end != ':')
-        perror_msg_and_die("Bad size prefix in '%s'", str);
+        pvoid error_msg_and_die("Bad size prefix in '%s'", str);
 
     return end + 1;
 }
@@ -134,7 +134,7 @@ static void delete_files(gpointer data, gpointer user_data_unused)
         log("%s is %.0f bytes (more than %.0f MB), deleting '%s'",
                 dir, cur_size, cap_size / (1024*1024), worst_file);
         if (unlink(worst_file) != 0)
-            perror_msg("Can't unlink '%s'", worst_file);
+            pvoid error_msg("Can't unlink '%s'", worst_file);
         free(worst_file);
     }
 }
