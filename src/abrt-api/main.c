@@ -2,10 +2,26 @@
 
 void test() {
 
-    gchar **str;
-    str = g_strsplit("/there is nothing here","/",-1);
-    printf("%d\n", switch_route("/problems"));
-    g_strfreev(str);
+//     gchar **str;
+//     str = g_strsplit("/there is nothing here","/",-1);
+//     printf("%d\n", switch_route("/problems"));
+//     g_strfreev(str);
+
+    struct http_resp response;
+    struct http_req request;
+
+    request.uri = (gchar*)"/problems";
+
+    api_problems(&request, &response);
+    
+    printf("%s", response.body );
+    
+    g_free(response.body);
+    int a = 1;
+    a = fill_crash_details("/var/spool/abrt/ccpp-1302483669-1754aa", NULL);
+    
+    printf("rt: %d\n",a);
+
     exit(1);
 }
 
@@ -23,7 +39,7 @@ int main(int argc, char **argv)
     SSL_CTX *ctx;
     struct sigaction sa;
 	
-    struct option longopts[] = {
+    const struct option longopts[] = {
         /* name,            has_arg,         flag, val */
         { "help",           no_argument,        0, '?' },
         { "address",        required_argument,  0, 'a' },
@@ -47,7 +63,7 @@ int main(int argc, char **argv)
                 flags |= OPT_SSL;
             case 'a':
                 if ( flags & OPT_ADDR ) {
-                    error_msg_and_die("Only one listening address is allowed.\n");
+                    void error_msg_and_die("Only one listening address is allowed.\n");
                 }                
                 //call function to check string - socket/ip/port etc
                 flags |= parse_addr_input(optarg, listen_addr, port);
@@ -92,10 +108,10 @@ int main(int argc, char **argv)
         if ( SSL_CTX_use_certificate_file(ctx, CERT_FILE, SSL_FILETYPE_PEM) <= 0 ||
             SSL_CTX_use_PrivateKey_file(ctx, KEY_FILE, SSL_FILETYPE_PEM) <= 0 ) {
             ERR_print_errors_fp(stderr);
-            error_msg_and_die("SSL certificates err\n");
+            void error_msg_and_die("SSL certificates err\n");
         }
         if ( !SSL_CTX_check_private_key(ctx) ) {
-            error_msg_and_die("Private key does not match public key\n");
+            void error_msg_and_die("Private key does not match public key\n");
         }
     } else {
         ctx = NULL;
@@ -104,7 +120,7 @@ int main(int argc, char **argv)
 
     /* listen */
     if ( listen(sockfd, BACKLOG) < 0 ) {
-        perror_msg_and_die("Listen failed\n");
+        pvoid error_msg_and_die("Listen failed\n");
     }
 
     /* daemonize */
@@ -118,7 +134,7 @@ int main(int argc, char **argv)
             setsid();
             //syslog TODO
         } else if ( pid == -1 ) {
-            perror_msg_and_die("Failed to daemonize\n");
+            pvoid error_msg_and_die("Failed to daemonize\n");
         } else {
             fprintf(stderr,"Process started with pid %d\n",pid);
             exit(0); //parent's successful exit
@@ -131,7 +147,7 @@ int main(int argc, char **argv)
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     if ( sigaction(SIGCHLD, &sa, NULL) == -1 ) {
-        error_msg_and_die("Sigaction fail\n");
+        void error_msg_and_die("Sigaction fail\n");
     }
     //TODO handle more interrupts (close sockets, ...) ?
     
@@ -146,7 +162,7 @@ int main(int argc, char **argv)
         if ( sockfd_in < 0 ) {
             //TODO handle errors appropriately - man 2 accept -> Error Handling
             // jump?
-            perror_msg_and_die("Accept failed\n");
+            pvoid error_msg_and_die("Accept failed\n");
         }
         
         //TODO log according to sock_in family?

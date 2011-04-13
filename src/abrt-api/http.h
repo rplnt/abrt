@@ -2,7 +2,6 @@
 #define HTTP_H
 
 
-
 #define METHODS_CNT (8)
 /* UNDEFINED means that http_req structure wasn't used */
 enum http_method {
@@ -53,7 +52,8 @@ struct http_resp {
     enum http_response_code code;
     gchar *reponse_line;
     GString *head;
-    GString *body;
+    gchar *body; //NULL if body is empty
+    int fd; //TODO
 };
 
 /* parse headers of the http request

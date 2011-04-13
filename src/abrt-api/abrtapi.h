@@ -60,6 +60,9 @@
 
 #define pass (0)
 
+#define API_VERSION "0.1"
+#define TIME_FORMAT "%Y/%m/%d  %H:%M:%S" //one day it might be an option
+
 /* problem summary */
 typedef struct problem_summary  {
     gchar* id;
@@ -106,14 +109,15 @@ int hash_method(gchar *methodstr);
 
 bool validate_request(const struct http_req *request);
 void generate_response(const struct http_req *request, struct http_resp *response);
-void fill_crash_details(const char* dir_name /* TODO XML */);
-void list_problems(/*TODO xml*/);
+int fill_crash_details(const char* dir_name, xmlNodePtr root /* TODO XML */);
+void list_problems(xmlNodePtr root);
 GList* create_list(GList *list, char* dir_name);
-void add_problem(problem_t *problem /* TODO XML */);
+void add_problem(problem_t* problem, xmlNodePtr root);
 void free_list(problem_t *item);
 int switch_route(const gchar *url);
                 
-
+int api_entry_point(const struct http_req* request, struct http_resp* response);
+int api_problems(const struct http_req* request, struct http_resp* response);
 
 
 #endif

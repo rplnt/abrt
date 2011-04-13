@@ -1,4 +1,5 @@
 #include "abrtapi.h"
+#include <libxml2/libxml/tree.h>
 
 
 int init_n_socket(char *address, char *port)
@@ -12,18 +13,18 @@ int init_n_socket(char *address, char *port)
     hints.ai_flags     |= AI_CANONNAME;
 
     if ( getaddrinfo(address, port, &hints, &res) != 0 ) {
-        error_msg_and_die("Couldn't get info for connection from \
+        void error_msg_and_die("Couldn't get info for connection from \
                             \"%s\" on port \"%s\"\n",address,port);
     }
 
     /* create socket */
     sockfd = socket(res->ai_family,res->ai_socktype,0);
     if ( sockfd < 0 ) {
-        perror_msg_and_die("Creating socket failed\n");
+        pvoid error_msg_and_die("Creating socket failed: ");
     }
     
     if ( bind(sockfd, (struct sockaddr*)res->ai_addr, res->ai_addrlen) == -1 ) {
-        perror_msg_and_die("Bind failed\n");
+        pvoid error_msg_and_die("Bind failed: ");
     }
 
     freeaddrinfo(res);
@@ -39,7 +40,7 @@ int init_u_socket(char *sock_name)
 
     sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     if ( sockfd < 0 ) {
-        perror_msg_and_die("Creating socket failed\n");
+        pvoid error_msg_and_die("Creating socket failed\n");
     }
 
     /* create named unix socket */
@@ -49,7 +50,7 @@ int init_u_socket(char *sock_name)
     //unlink(u_socket.sun_path);
     len = strlen(u_socket.sun_path) + sizeof(u_socket.sun_family);
     if ( bind(sockfd, (struct sockaddr*)&u_socket,len) == -1 ) {
-        perror_msg_and_die("Bind failed\n");
+        pvoid error_msg_and_die("Bind failed\n");
     }
 
     return sockfd;
@@ -68,7 +69,7 @@ SSL_CTX* init_ssl_context(void)
     ctx = SSL_CTX_new(method);
     if ( ctx == NULL ) {
         ERR_print_errors_fp(stderr); //debug?
-        error_msg_and_die("SSL Error\n");
+        void error_msg_and_die("SSL Error\n");
     }
 
     return ctx;
@@ -78,7 +79,7 @@ SSL_CTX* init_ssl_context(void)
 /* TODO */
 void usage_and_exit()
 {
-    error_msg_and_die("usage");
+    void error_msg_and_die("usage");
 }
 
 void sigchld_handler(int sig)
@@ -91,7 +92,7 @@ void sigchld_handler(int sig)
 bool safe_strcpy(char* dest, const char* src, int max_len)
 {
     if ( strlen(src) > max_len ) {
-        error_msg_and_die("\"%.8s...\" could not fit into memory\n",src);
+        void error_msg_and_die("\"%.8s...\" could not fit into memory\n",src);
     }
     strcpy(dest, src);
 
@@ -123,7 +124,7 @@ int parse_addr_input(char* input, char* addr, char* port)
             if ( len<INPUT_LEN ){
                 strncpy(addr, input+1, len);
             } else {
-                error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
+                void error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
             }
             addr[len] = '\0';
             rt |= OPT_IP|OPT_PORT;
@@ -134,7 +135,7 @@ int parse_addr_input(char* input, char* addr, char* port)
             if ( len<INPUT_LEN ){
                 strncpy(addr, input, len);
             } else {
-                error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
+                void error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
             }
             addr[len] = '\0';
             rt |= OPT_IP|OPT_PORT;
@@ -167,7 +168,7 @@ void serve(void* sock, int flags)
     GString *headers = g_string_sized_new(READ_BUF);
     GString *body = NULL;
     struct http_req request = { UNDEFINED, NULL, NULL, NULL, NULL };
-//     struct http_resp response = { UNDECLARED, NULL, NULL, NULL };
+//     struct http_resp response = { UNDECLARED, NULL, NULL, NULL/*, -1*/ };
     
     while ( true ) {
         err = (flags & OPT_SSL) ? SSL_read(sock, buffer, READ_BUF-1):
@@ -401,7 +402,7 @@ int switch_route(const gchar *url)
 {
     gchar **significant;
     gchar **resources;
-    int i,rt=-1;
+    int i, rt=-1;
 
     /* quick check for root */
     if ( strlen(url) == 1 ) {
@@ -423,18 +424,99 @@ int switch_route(const gchar *url)
         }
     }
 
-    g_strfreev(resources);
     g_strfreev(significant);
+    g_strfreev(resources);
 
     return rt;
 }
 
 
+int api_entry_point(const struct  http_req *request, struct http_resp *response)
+{
+    xmlDocPtr doc = NULL;
+    xmlNodePtr root = NULL;
+    xmlNodePtr node = NULL;
+    int body_len;
+
+    /* create xml response */
+    doc = xmlNewDoc(BAD_CAST "1.0");
+    root = xmlNewNode(NULL, BAD_CAST "api");
+    xmlDocSetRootElement(doc, root);
+    xmlNewProp(root, BAD_CAST "version", BAD_CAST API_VERSION);
+
+    node = xmlNewNode(NULL, BAD_CAST "link");
+    xmlNewProp(node, BAD_CAST "rel", BAD_CAST "problems");
+    xmlNewProp(node, BAD_CAST "href", BAD_CAST "/problems/");
+    xmlAddChild(root, node);
+
+    /* copy it to http_resp */
+    xmlDocDumpFormatMemory(doc, (xmlChar**)&response->body, &body_len, 1);
+
+    
+    xmlFreeDoc(doc);
+    xmlCleanupParser();
+
+    return body_len;
+}
+
+
+int api_problems(const struct http_req* request, struct http_resp* response)
+{
+    gchar **url;
+    gchar **options;
+    xmlDocPtr doc = NULL;
+    xmlNodePtr root = NULL;
+    bool include_body;
+    int body_len;
+
+    doc = xmlNewDoc(BAD_CAST "1.0");
+
+    options = g_strsplit(request->uri, "?", 2);
+    url = g_strsplit(options[0], "/", -1);
+
+    // we know that 0 = "" and 1 = "problems"
+    if ( g_strv_length(url) == 2 || (g_strv_length(url) == 3 && url[2][0] == '\0') ) {
+        // list problems
+        root = xmlNewNode(NULL, BAD_CAST "problems");
+        list_problems(root);
+        include_body = TRUE;
+    } else if ( g_strv_length(url) == 3 || (g_strv_length(url) == 4 && url[3][0] == '\0') ) {
+        // details about url[2]
+        gchar *full_path;
+        full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2] , NULL);
+        root = xmlNewNode(NULL, BAD_CAST "problem");
+        include_body = TRUE;
+    } else if ( g_strcmp0(url[3],"dump") == 0 ) {
+        // serve memory dump
+        //open file, save sescriptor and set size
+        include_body = FALSE;
+    } else {
+        root = xmlNewNode(NULL, BAD_CAST "error");
+        //err
+        include_body = TRUE;
+    }
+
+    xmlDocSetRootElement(doc, root);
+
+    if (include_body) {
+        xmlDocDumpFormatMemory(doc, (xmlChar**)&response->body, &body_len, 1);
+    }
+
+    xmlFreeDoc(doc);
+    xmlCleanupParser();
+    g_strfreev(url);
+    g_strfreev(options);
+
+    return body_len;
+    
+}
+
 
 
 void generate_response(const struct http_req *request, struct http_resp *response)
 {
-
+    int c_len;
+    
 //     if ( !authentize(http_req) ) {
 //         return http_error(402, response);
 //     }
@@ -443,21 +525,17 @@ void generate_response(const struct http_req *request, struct http_resp *respons
     /* switch "first level" */
     switch ( switch_route(request->uri) ) {
         case 0: //root node
+            c_len = api_entry_point(request,response);
             break;
         case 1: //problems
+            c_len = api_problems(request,response);
             break;
         case -1: //unknown
-            break;
         default: //broken api
+            //http_error(404, response);
             break;
     }
     
-    
-    // prepare XML tree and route
-    /* route '/' - TODO
-     * route '/problems' - list_problems();
-     * route '/problems/id' - read_crash_details();
-     */
 
 
 }
@@ -465,15 +543,17 @@ void generate_response(const struct http_req *request, struct http_resp *respons
 
 
 /* will read whole dir and append all problems to XML tree */
-void fill_crash_details(const char* dir_name /* TODO XML */)
+int fill_crash_details(const char* dir_name, xmlNodePtr root)
 {
     GList *keys, *p;
+    int rt=0;
     crash_data_t *crash_data;
     struct crash_item *item;
+//     xmlNodePtr node;
 
     int sv_logmode = logmode;
-    logmode = 0; /* suppress EPERM/EACCES errors in opendir */
-    struct dump_dir *dd = dd_opendir(dir_name, /*flags:*/ DD_OPEN_READONLY);
+    //logmode = 0; /* suppress EPERM/EACCES errors in opendir */
+    struct dump_dir *dd = dd_opendir(dir_name, /*flags:*/ DD_OPEN_READONLY&DD_FAIL_QUIETLY_ENOENT);
     logmode = sv_logmode;
 
     crash_data = create_crash_data_from_dump_dir(dd);
@@ -482,13 +562,30 @@ void fill_crash_details(const char* dir_name /* TODO XML */)
     keys = g_hash_table_get_keys(crash_data);
     keys = p = g_list_sort(keys, (GCompareFunc)strcmp);
 
-    /* for each file create node */
+    /* for each "file" create node */
     while (p) {
-        printf("*");
+
         item = g_hash_table_lookup(crash_data, p->data);
-        if ( item && !strchr(item->content,'\n') ) {
+        if ( item ) {
+            
             printf("[%s] ", (char*)p->data); //key
             printf("%s\n", item->content); //data
+
+
+
+//             node = xmlNewNode(NULL, BAD_CAST "problem");
+// 
+//             xmlNewProp(node, BAD_CAST "id", BAD_CAST problem->id);
+//             xmlNewProp(node, BAD_CAST "href", BAD_CAST href);
+//             xmlNewChild(node, NULL, BAD_CAST "reason", BAD_CAST problem->reason);
+//             time_node = xmlNewChild(node, NULL, BAD_CAST "time", BAD_CAST time_str);
+//             xmlNewProp(time_node, BAD_CAST "format", BAD_CAST TIME_FORMAT);
+// 
+//             xmlAddChild(root, node);
+
+            
+            rt++;
+            
         }
         p = p->next;
     }
@@ -496,12 +593,12 @@ void fill_crash_details(const char* dir_name /* TODO XML */)
     g_list_free(keys);
     g_hash_table_destroy(crash_data);
 
-    return;
+    return rt;
 }
 
 
 /* this will fill out XML tree for response to /problems/ */
-void list_problems(/*TODO xml*/)
+void list_problems(xmlNodePtr root)
 {
     char *home;
     char *home_path;
@@ -516,7 +613,7 @@ void list_problems(/*TODO xml*/)
     list = create_list(list, (char*)DEBUG_DUMPS_DIR);
 
     /* now on each list item call add_problem (to prepared XML tree) */
-    g_list_foreach(list, (GFunc)add_problem, (void*)"--------");
+    g_list_foreach(list, (GFunc)add_problem, root);
 
     
     // g_list_free_full(list, (GDestroyNotify)free_list); //since 2.28
@@ -583,17 +680,31 @@ GList* create_list(GList *list, char* dir_name)
 }
 
 
-/* this will add <problem> to xml tree */
-void add_problem(problem_t *problem /* TODO XML */)
+/* this will add <problem> to an xml tree */
+void add_problem(problem_t *problem, xmlNodePtr root)
 {
     char *end;
+    char *href;
     char time_str[256];
+    xmlNodePtr node = NULL;
+    xmlNodePtr time_node = NULL;
     time_t time;
 
     time = strtol(problem->time, &end, 10);
     if (!errno && !*end && end != problem->time) {
-        if ( strftime(time_str, sizeof(time_str), "%c", localtime(&time)) ) {
-            printf("%s\n\t%s\n\t%s\n", problem->id, problem->reason, time_str);
+        if ( strftime(time_str, sizeof(time_str), TIME_FORMAT, localtime(&time)) ) {
+            href =  g_strjoin("/", "/problems", problem->id, NULL);
+            node = xmlNewNode(NULL, BAD_CAST "problem");
+
+            xmlNewProp(node, BAD_CAST "id", BAD_CAST problem->id);
+            xmlNewProp(node, BAD_CAST "href", BAD_CAST href);
+            xmlNewChild(node, NULL, BAD_CAST "reason", BAD_CAST problem->reason);
+            time_node = xmlNewChild(node, NULL, BAD_CAST "time", BAD_CAST time_str);
+            xmlNewProp(time_node, BAD_CAST "format", BAD_CAST TIME_FORMAT);
+
+            xmlAddChild(root, node);
+
+            g_free(href);
         }
     }
     
