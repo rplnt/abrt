@@ -6,7 +6,7 @@
 #undef DEBUG_DUMPS_DIR
 #define DEBUG_DUMPS_DIR "/var/spool/abrt"
 //###########################################################*/
-//SERIOSLY!
+//FIXME FIXME FIXME FIXME
 
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -116,6 +116,10 @@ void add_problem(problem_t* problem, xmlNodePtr root);
 void free_list(problem_t *item);
 int switch_route(const gchar *url);
 char *rm_slash(const char *path);
+
+bool http_authentize(const struct http_req *request);
+struct http_resp* http_add_header(const gchar* header_line, struct http_resp* response);
+struct http_resp* http_error(enum http_method error, struct http_resp* response);
                 
 int api_entry_point(const struct http_req* request, struct http_resp* response);
 int api_problems(const struct http_req* request, struct http_resp* response);

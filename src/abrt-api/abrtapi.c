@@ -460,31 +460,19 @@ int api_entry_point(const struct  http_req *request, struct http_resp *response)
 }
 
 
-/* modified version of rm_trailing_slashes in dump_dir.c */
-gchar *rm_slash(const gchar *path)
-{
-    int len = strlen(path);
-    while (len != 0 && path[len-1] == '/') {
-        len--;
-    }
-    
-    return g_strndup(path, len);
-}
-
-
+/* this function is called on request to /api/problems/... */
 int api_problems(const struct http_req* request, struct http_resp* response)
 {
     gchar **url;
     gchar **options;
     gchar *path;
     gchar *full_path        = NULL;
-    gchar *home             = NULL;
-    gchar *home_path        = NULL;
+    gchar *home             = getenv("HOME");
     xmlDocPtr doc           = NULL;
     xmlNodePtr root         = NULL;
     bool include_body;
-    int body_len;
-    int err;
+    int body_len; //content-length
+    int ret;
 
     doc = xmlNewDoc(BAD_CAST "1.0");
 
@@ -498,46 +486,57 @@ int api_problems(const struct http_req* request, struct http_resp* response)
         root = xmlNewNode(NULL, BAD_CAST "problems");
         list_problems(root);
         include_body = TRUE;
+        //it's ok to serve empty list
         
     } else if ( g_strv_length(url) == 3 ) {
         // assume correct id in url[2]
         root = xmlNewNode(NULL, BAD_CAST "problem");
-        full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2] , NULL);
-        err = fill_crash_details(full_path, root);
+        full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], NULL);
+        ret = fill_crash_details(full_path, root);
 
         /* check home if nothing was found in dump dir */
-        if ( !err ) {
-            home = getenv("HOME");
-            if ( home ) {
-                home_path = concat_path_file(home, ".abrt/spool");
-                full_path = g_strjoin("/", home_path , url[2] , NULL);
-                err = fill_crash_details(full_path, root);
-            }
+        if ( !ret && home ) {
+            g_free(full_path);
+            full_path = g_strjoin("/", home, ".abrt/spool" , url[2], NULL);
+            ret = fill_crash_details(full_path, root);
         }
 
         include_body = TRUE;
-        if ( err == 0 ) {
-            //http_error(404,response);
+        if ( ret == 0 ) {
+            http_error(404, response);
             include_body = FALSE;
         }
         
     } else if ( g_strcmp0(url[3],"dump") == 0 ) {
         // serve memory dump
-        //open file, save descriptor and set size
         include_body = FALSE;
+        full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], "coredump", NULL);
+        ret = open(full_path, O_RDONLY);
+        if ( ret == -1 ) {
+            g_free(full_path);
+            full_path = g_strjoin("/", home, ".abrt/spool" , url[2], NULL);
+            ret = open(full_path, O_RDONLY);
+        }
+
+        if ( ret == -1 ) {
+            http_error(404, response);
+        } else {
+            struct stat buf;
+            fstat(ret, &buf);
+            body_len = buf.st_size; //bytes
+            response->fd = ret;
+        }
         
     } else {
         root = xmlNewNode(NULL, BAD_CAST "error");
-        //err
+        //append some error message
         include_body = TRUE;
-        
     }
 
-    xmlDocSetRootElement(doc, root);
-
     if (include_body) {
+        xmlDocSetRootElement(doc, root);
         xmlDocDumpFormatMemory(doc, (xmlChar**)&response->body, &body_len, 1);
-    } //else = NULL
+    }
 
     xmlFreeDoc(doc);
     xmlCleanupParser();
@@ -551,15 +550,43 @@ int api_problems(const struct http_req* request, struct http_resp* response)
 }
 
 
+/* do basic authentification against PAM and lower privileges */
+bool http_authentize(const struct http_req *request)
+{
+    return true;
+}
 
+
+/*
+ * add given line to response's headers and terminate with CR-LF
+ */
+struct http_resp* http_add_header(const gchar* header_line, struct http_resp* response)
+{
+    return response;
+}
+
+
+/*
+ * fill out complete(?) response according to error
+ * previous contents will be cleared
+ */
+struct http_resp* http_error(enum http_method error, struct http_resp* response)
+{
+    return response;
+}
+
+
+/*
+ * prepare ready-to-send http response
+ */
 void generate_response(const struct http_req *request, struct http_resp *response)
 {
     int c_len;
     
-//     if ( !authentize(http_req) ) {
-//         return http_error(402, response);
-//     }
-
+    if ( !http_authentize(request) ) {
+        http_error(402, response);
+        return;
+    }
 
     /* switch "first level" */
     switch ( switch_route(request->uri) ) {
@@ -571,7 +598,7 @@ void generate_response(const struct http_req *request, struct http_resp *respons
             break;
         case -1: //unknown
         default: //broken api
-            //http_error(404, response);
+            http_error(404, response);
             break;
     }
     
@@ -588,7 +615,8 @@ int fill_crash_details(const char* dir_name, xmlNodePtr root)
     int rt=0;
     crash_data_t *crash_data;
     struct crash_item *item;
-//     xmlNodePtr node;
+    xmlNodePtr node = NULL;
+    xmlNodePtr text = NULL;
 
     DIR *dir = opendir(dir_name);
     
@@ -616,27 +644,52 @@ int fill_crash_details(const char* dir_name, xmlNodePtr root)
     while (p) {
 
         item = g_hash_table_lookup(crash_data, p->data);
-        if ( item ) {
+        if (item) {
             
-            printf("[%s] ", (char*)p->data); //key
-            printf("%s\n", item->content); //data
+            node = xmlNewNode(NULL, BAD_CAST "property");
+            xmlNewProp(node, BAD_CAST "name", BAD_CAST p->data);
 
+            /* text containing newlines */
+            if ( strrchr(item->content, '\n') != NULL )  {
+                xmlNewProp(node, BAD_CAST "type", BAD_CAST "text");
+                text = xmlNewText(BAD_CAST item->content);
+                xmlAddChild(node, text);
 
+            /* unix time stamp */
+            } else if ( g_strcmp0(p->data,"time") == 0 ) {
+                xmlNewProp(node, BAD_CAST "type", BAD_CAST "time");
+                xmlNewProp(node, BAD_CAST "format", BAD_CAST "%s");
+                text = xmlNewText(BAD_CAST item->content);
+                xmlAddChild(node, text);
 
-//             node = xmlNewNode(NULL, BAD_CAST "problem");
-// 
-//             xmlNewProp(node, BAD_CAST "id", BAD_CAST problem->id);
-//             xmlNewProp(node, BAD_CAST "href", BAD_CAST href);
-//             xmlNewChild(node, NULL, BAD_CAST "reason", BAD_CAST problem->reason);
-//             time_node = xmlNewChild(node, NULL, BAD_CAST "time", BAD_CAST time_str);
-//             xmlNewProp(time_node, BAD_CAST "format", BAD_CAST TIME_FORMAT);
-// 
-//             xmlAddChild(root, node);
+            /* integer */
+            } else if ( strspn(item->content,"0123456789") == strlen(item->content) ) {
+                xmlNewProp(node, BAD_CAST "type", BAD_CAST "integer");
+                xmlNewProp(node, BAD_CAST "value", BAD_CAST item->content);
 
-            
+            /* coredump */
+            } else if ( g_strcmp0(p->data,"coredump") == 0 ) {
+                gchar **parts = g_strsplit(dir_name, "/", -1);
+                gchar *id = parts[g_strv_length(parts)-1];
+                gchar *full_path = g_strjoin("/", "/api/problems", id, "dump", NULL);
+                
+                xmlNewProp(node, BAD_CAST "type", BAD_CAST "data");
+                xmlNewProp(node, BAD_CAST "href", BAD_CAST full_path);
+                
+                g_strfreev(parts);
+                g_free(full_path);
+
+            /* everything else is treated as line of text */
+            } else {
+                xmlNewProp(node, BAD_CAST "type", BAD_CAST "line");
+                text = xmlNewText(BAD_CAST item->content);
+                xmlAddChild(node, text);
+            }
+
+            xmlAddChild(root, node);
             rt++;
-            
         }
+        
         p = p->next;
     }
 
@@ -696,7 +749,7 @@ GList* create_list(GList *list, char* dir_name)
             dump_dir_name = concat_path_file(dir_name, dent->d_name);
 
             struct stat statbuf;
-            if ( stat(dump_dir_name, &statbuf) == 0 && S_ISDIR(statbuf.st_mode ) ) {
+            if ( stat(dump_dir_name, &statbuf) == 0 && S_ISDIR(statbuf.st_mode) ) {
                 dd = dd_opendir(dump_dir_name, DD_OPEN_READONLY);
                 if ( dd != NULL ) {
                     problem_t *problem;
@@ -771,7 +824,7 @@ void free_list(problem_t *item)
 }
 
 
-/* remove CR from static buffer in-place */
+/* remove CR from buffer in-place */
 bool delete_cr(gchar *in)
 {
     int index_l=0, index_r=0;
@@ -790,3 +843,14 @@ bool delete_cr(gchar *in)
     
 }
 
+
+/* modified version of rm_trailing_slashes in dump_dir.c */
+gchar *rm_slash(const gchar *path)
+{
+    int len = strlen(path);
+    while (len != 0 && path[len-1] == '/') {
+        len--;
+    }
+
+    return g_strndup(path, len);
+}

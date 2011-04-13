@@ -14,21 +14,25 @@ void test() {
     api_problems(&request, &response);
     printf("%s", response.body );
     printf("---------------------------------\n");
+    response.body = NULL;
 
     request.uri = (gchar*)"/problems";
     api_problems(&request, &response);
     printf("%s", response.body );
     printf("---------------------------------\n");
+    response.body = NULL;
 
     request.uri = (gchar*)"/problems/ccpp-1302483699-2232";
     api_problems(&request, &response);
     printf("%s", response.body );
     printf("---------------------------------\n");
+    response.body = NULL;
 
     request.uri = (gchar*)"/problems/trololol";
     api_problems(&request, &response);
     printf("%s", response.body );
     printf("---------------------------------\n");
+    response.body = NULL;
     
     g_free(response.body);
  
