@@ -7,6 +7,7 @@ abrt_api_SOURCES = \
 abrt_api_CPPFLAGS = \
     -I$(srcdir)/../include/report -I$(srcdir)/../include \
     -I$(srcdir)/../lib \
+    $(LIBXML_CFLAGS) \
     $(GLIB_CFLAGS) \
     $(OPENSSL_CFLAGS) \
     -D_GNU_SOURCE \
@@ -16,6 +17,7 @@ abrt_api_CPPFLAGS = \
 abrt_api_LDADD = \
     ../lib/libreport.la \
     $(GLIB_LIBS) \
+    $(LIBXML_LIBS) \
     $(OPENSSL_LIBS)
 
 #man_MANS = abrt-api.1

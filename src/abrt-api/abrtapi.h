@@ -29,7 +29,8 @@
 #include <glib/ghash.h>
 #include <glib-2.0/glib.h>
 //#include <glib/gregex.h>
-//#include <libxml2/libxml/parser.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
 //#include <gio/gio.h>
 
 #include "abrtlib.h"
@@ -103,12 +104,14 @@ int hash_method(gchar *methodstr);
 
 ////TODO Clean Up & Comment
 
+bool validate_request(const struct http_req *request);
 void generate_response(const struct http_req *request, struct http_resp *response);
 void fill_crash_details(const char* dir_name /* TODO XML */);
 void list_problems(/*TODO xml*/);
 GList* create_list(GList *list, char* dir_name);
 void add_problem(problem_t *problem /* TODO XML */);
 void free_list(problem_t *item);
+int switch_route(const gchar *url);
                 
 
 

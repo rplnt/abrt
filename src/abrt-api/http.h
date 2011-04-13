@@ -18,6 +18,7 @@ enum http_method {
 };
 
 enum http_response_code {
+    UNDECLARED = 0,
     OK = 200,
     CREATED = 201,
     ACCEPTED = 202,
@@ -50,8 +51,8 @@ static char allowed_uri_chars[];
 
 struct http_resp {
     enum http_response_code code;
-    struct http_req *request; // could be useful?
-    GHashTable *options;
+    gchar *reponse_line;
+    GString *head;
     GString *body;
 };
 

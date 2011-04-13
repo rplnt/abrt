@@ -1,11 +1,18 @@
 #include "abrtapi.h"
 
+void test() {
+
+    gchar **str;
+    str = g_strsplit("/there is nothing here","/",-1);
+    printf("%d\n", switch_route("/problems"));
+    g_strfreev(str);
+    exit(1);
+}
+
 
 int main(int argc, char **argv)
 {
-    //list_problems();
-    //fill_crash_details("/var/spool/abrt/ccpp-1302482644-22153/");
-    //exit(1);
+    test();
     int flags=0; //config flags
     char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket

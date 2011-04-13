@@ -167,6 +167,7 @@ void serve(void* sock, int flags)
     GString *headers = g_string_sized_new(READ_BUF);
     GString *body = NULL;
     struct http_req request = { UNDEFINED, NULL, NULL, NULL, NULL };
+//     struct http_resp response = { UNDECLARED, NULL, NULL, NULL };
     
     while ( true ) {
         err = (flags & OPT_SSL) ? SSL_read(sock, buffer, READ_BUF-1):
@@ -256,11 +257,11 @@ void parse_head(struct http_req* request, const GString* headers)
     gchar **s_request   = NULL;
     GHashTable *h_opts  = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 
-    static char allowed_uri_chars[] = "0123456789\
+    const char allowed_uri_chars[] = "0123456789\
                                    abcdefghijklmnopqrstuvwxyz\
                                    ;/?:@=&.%";
-    static char method_names[][8] = { "GET", "POST", "DELETE", "HEAD",
-                                "PUT", "OPTIONS", "TRACE", "CONNECT"    
+    const char *method_names[] = { "GET", "POST", "DELETE", "HEAD",
+                                "PUT", "OPTIONS", "TRACE", "CONNECT", NULL    
     };
 
 
@@ -282,7 +283,7 @@ void parse_head(struct http_req* request, const GString* headers)
 	}
 
     /* request method */
-    for (i=0; i<METHODS_CNT; i++ ) {
+    for (i=0;method_names[i]!=NULL;i++) {
         if ( g_ascii_strcasecmp(s_request[0], method_names[i]) == 0 ) {
             request->method = i+1; // 0 = UNDEFINED
             break;
@@ -315,9 +316,9 @@ void parse_head(struct http_req* request, const GString* headers)
 
     /* version and other stuff */
     version = strdup(s_request[2]);
-    
-    /* option headers */
+
     i = 1;
+    /* option headers */
     while ( i < len ) {
         gchar *value, *key, *new_value, **key_value;
 
@@ -380,13 +381,85 @@ stop:
 }
 
 
+/* TODO */
+bool validate_request(const struct http_req *request)
+{
+    gchar **url;
+
+    /*  one or zero '?' in url */
+    url = g_strsplit(request->uri,"?",-1);
+    if ( g_strv_length(url) > 2 ) {
+        return false;
+    }
+    g_strfreev(url);
+
+    return true;
+}
+
+
+int switch_route(const gchar *url)
+{
+    gchar **significant;
+    gchar **resources;
+    int i,rt=-1;
+
+    /* quick check for root */
+    if ( strlen(url) == 1 ) {
+        return 0;
+    }
+
+    /* we have to throw ?options part out (/route?option wouldn't work) */
+    significant = g_strsplit(url,"?",2);
+
+    const gchar *routes[] = { "\\root\\", "problems", NULL
+    };
+
+    resources = g_strsplit(significant[0], "/", -1);
+    //resources[0] = ""
+    for (i=1;routes[i]!=NULL;i++) {
+        if ( g_strcmp0(resources[1],routes[i]) == 0 ) {
+            rt = i;
+            break;
+        }
+    }
+
+    g_strfreev(resources);
+    g_strfreev(significant);
+
+    return rt;
+}
+
+
+
+
 void generate_response(const struct http_req *request, struct http_resp *response)
 {
+
+//     if ( !authentize(http_req) ) {
+//         return http_error(402, response);
+//     }
+
+
+    /* switch "first level" */
+    switch ( switch_route(request->uri) ) {
+        case 0: //root node
+            break;
+        case 1: //problems
+            break;
+        case -1: //unknown
+            break;
+        default: //broken api
+            break;
+    }
+    
+    
     // prepare XML tree and route
     /* route '/' - TODO
      * route '/problems' - list_problems();
      * route '/problems/id' - read_crash_details();
      */
+
+
 }
 
 
@@ -409,6 +482,7 @@ void fill_crash_details(const char* dir_name /* TODO XML */)
     keys = g_hash_table_get_keys(crash_data);
     keys = p = g_list_sort(keys, (GCompareFunc)strcmp);
 
+    /* for each file create node */
     while (p) {
         printf("*");
         item = g_hash_table_lookup(crash_data, p->data);
@@ -522,7 +596,7 @@ void add_problem(problem_t *problem /* TODO XML */)
             printf("%s\n\t%s\n\t%s\n", problem->id, problem->reason, time_str);
         }
     }
-    //printf("%s\n\t%s\n\t%s\n", problem->id, problem->reason, problem->time);
+    
 }
 
 
@@ -536,7 +610,7 @@ void free_list(problem_t *item)
 }
 
 
-/* remove CR in place and return last character */
+/* remove CR from static buffer in-place */
 bool delete_cr(gchar *in)
 {
     int index_l=0, index_r=0;
