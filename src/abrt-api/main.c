@@ -63,7 +63,7 @@ int main(int argc, char **argv)
                 flags |= OPT_SSL;
             case 'a':
                 if ( flags & OPT_ADDR ) {
-                    void error_msg_and_die("Only one listening address is allowed.\n");
+                    error_msg_and_die("Only one listening address is allowed.\n");
                 }                
                 //call function to check string - socket/ip/port etc
                 flags |= parse_addr_input(optarg, listen_addr, port);
@@ -108,10 +108,10 @@ int main(int argc, char **argv)
         if ( SSL_CTX_use_certificate_file(ctx, CERT_FILE, SSL_FILETYPE_PEM) <= 0 ||
             SSL_CTX_use_PrivateKey_file(ctx, KEY_FILE, SSL_FILETYPE_PEM) <= 0 ) {
             ERR_print_errors_fp(stderr);
-            void error_msg_and_die("SSL certificates err\n");
+            error_msg_and_die("SSL certificates err\n");
         }
         if ( !SSL_CTX_check_private_key(ctx) ) {
-            void error_msg_and_die("Private key does not match public key\n");
+            error_msg_and_die("Private key does not match public key\n");
         }
     } else {
         ctx = NULL;
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 
     /* listen */
     if ( listen(sockfd, BACKLOG) < 0 ) {
-        pvoid error_msg_and_die("Listen failed\n");
+        error_msg_and_die("Listen failed\n");
     }
 
     /* daemonize */
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
             setsid();
             //syslog TODO
         } else if ( pid == -1 ) {
-            pvoid error_msg_and_die("Failed to daemonize\n");
+            error_msg_and_die("Failed to daemonize\n");
         } else {
             fprintf(stderr,"Process started with pid %d\n",pid);
             exit(0); //parent's successful exit
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
     if ( sigaction(SIGCHLD, &sa, NULL) == -1 ) {
-        void error_msg_and_die("Sigaction fail\n");
+        error_msg_and_die("Sigaction fail\n");
     }
     //TODO handle more interrupts (close sockets, ...) ?
     
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
         if ( sockfd_in < 0 ) {
             //TODO handle errors appropriately - man 2 accept -> Error Handling
             // jump?
-            pvoid error_msg_and_die("Accept failed\n");
+            error_msg_and_die("Accept failed\n");
         }
         
         //TODO log according to sock_in family?

@@ -13,18 +13,18 @@ int init_n_socket(char *address, char *port)
     hints.ai_flags     |= AI_CANONNAME;
 
     if ( getaddrinfo(address, port, &hints, &res) != 0 ) {
-        void error_msg_and_die("Couldn't get info for connection from \
+        error_msg_and_die("Couldn't get info for connection from \
                             \"%s\" on port \"%s\"\n",address,port);
     }
 
     /* create socket */
     sockfd = socket(res->ai_family,res->ai_socktype,0);
     if ( sockfd < 0 ) {
-        pvoid error_msg_and_die("Creating socket failed: ");
+        error_msg_and_die("Creating socket failed: ");
     }
     
     if ( bind(sockfd, (struct sockaddr*)res->ai_addr, res->ai_addrlen) == -1 ) {
-        pvoid error_msg_and_die("Bind failed: ");
+        error_msg_and_die("Bind failed: ");
     }
 
     freeaddrinfo(res);
@@ -40,7 +40,7 @@ int init_u_socket(char *sock_name)
 
     sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
     if ( sockfd < 0 ) {
-        pvoid error_msg_and_die("Creating socket failed\n");
+        error_msg_and_die("Creating socket failed\n");
     }
 
     /* create named unix socket */
@@ -50,7 +50,7 @@ int init_u_socket(char *sock_name)
     //unlink(u_socket.sun_path);
     len = strlen(u_socket.sun_path) + sizeof(u_socket.sun_family);
     if ( bind(sockfd, (struct sockaddr*)&u_socket,len) == -1 ) {
-        pvoid error_msg_and_die("Bind failed\n");
+        error_msg_and_die("Bind failed\n");
     }
 
     return sockfd;
@@ -69,7 +69,7 @@ SSL_CTX* init_ssl_context(void)
     ctx = SSL_CTX_new(method);
     if ( ctx == NULL ) {
         ERR_print_errors_fp(stderr); //debug?
-        void error_msg_and_die("SSL Error\n");
+        error_msg_and_die("SSL Error\n");
     }
 
     return ctx;
@@ -79,7 +79,7 @@ SSL_CTX* init_ssl_context(void)
 /* TODO */
 void usage_and_exit()
 {
-    void error_msg_and_die("usage");
+    error_msg_and_die("usage");
 }
 
 void sigchld_handler(int sig)
@@ -92,7 +92,7 @@ void sigchld_handler(int sig)
 bool safe_strcpy(char* dest, const char* src, int max_len)
 {
     if ( strlen(src) > max_len ) {
-        void error_msg_and_die("\"%.8s...\" could not fit into memory\n",src);
+        error_msg_and_die("\"%.8s...\" could not fit into memory\n",src);
     }
     strcpy(dest, src);
 
@@ -124,7 +124,7 @@ int parse_addr_input(char* input, char* addr, char* port)
             if ( len<INPUT_LEN ){
                 strncpy(addr, input+1, len);
             } else {
-                void error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
+                error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
             }
             addr[len] = '\0';
             rt |= OPT_IP|OPT_PORT;
@@ -135,7 +135,7 @@ int parse_addr_input(char* input, char* addr, char* port)
             if ( len<INPUT_LEN ){
                 strncpy(addr, input, len);
             } else {
-                void error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
+                error_msg_and_die("\"%.8s...\" could not fit into memory\n",input);
             }
             addr[len] = '\0';
             rt |= OPT_IP|OPT_PORT;
