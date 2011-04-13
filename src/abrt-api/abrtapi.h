@@ -115,6 +115,7 @@ GList* create_list(GList *list, char* dir_name);
 void add_problem(problem_t* problem, xmlNodePtr root);
 void free_list(problem_t *item);
 int switch_route(const gchar *url);
+char *rm_slash(const char *path);
                 
 int api_entry_point(const struct http_req* request, struct http_resp* response);
 int api_problems(const struct http_req* request, struct http_resp* response);

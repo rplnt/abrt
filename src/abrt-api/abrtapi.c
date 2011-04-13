@@ -460,50 +460,89 @@ int api_entry_point(const struct  http_req *request, struct http_resp *response)
 }
 
 
+/* modified version of rm_trailing_slashes in dump_dir.c */
+gchar *rm_slash(const gchar *path)
+{
+    int len = strlen(path);
+    while (len != 0 && path[len-1] == '/') {
+        len--;
+    }
+    
+    return g_strndup(path, len);
+}
+
+
 int api_problems(const struct http_req* request, struct http_resp* response)
 {
     gchar **url;
     gchar **options;
-    xmlDocPtr doc = NULL;
-    xmlNodePtr root = NULL;
+    gchar *path;
+    gchar *full_path        = NULL;
+    gchar *home             = NULL;
+    gchar *home_path        = NULL;
+    xmlDocPtr doc           = NULL;
+    xmlNodePtr root         = NULL;
     bool include_body;
     int body_len;
+    int err;
 
     doc = xmlNewDoc(BAD_CAST "1.0");
 
     options = g_strsplit(request->uri, "?", 2);
-    url = g_strsplit(options[0], "/", -1);
+    path = rm_slash(options[0]);
+    url = g_strsplit(path, "/", -1);
 
     // we know that 0 = "" and 1 = "problems"
-    if ( g_strv_length(url) == 2 || (g_strv_length(url) == 3 && url[2][0] == '\0') ) {
+    if ( g_strv_length(url) == 2 ) {
         // list problems
         root = xmlNewNode(NULL, BAD_CAST "problems");
         list_problems(root);
         include_body = TRUE;
-    } else if ( g_strv_length(url) == 3 || (g_strv_length(url) == 4 && url[3][0] == '\0') ) {
-        // details about url[2]
-        gchar *full_path;
-        full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2] , NULL);
+        
+    } else if ( g_strv_length(url) == 3 ) {
+        // assume correct id in url[2]
         root = xmlNewNode(NULL, BAD_CAST "problem");
+        full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2] , NULL);
+        err = fill_crash_details(full_path, root);
+
+        /* check home if nothing was found in dump dir */
+        if ( !err ) {
+            home = getenv("HOME");
+            if ( home ) {
+                home_path = concat_path_file(home, ".abrt/spool");
+                full_path = g_strjoin("/", home_path , url[2] , NULL);
+                err = fill_crash_details(full_path, root);
+            }
+        }
+
         include_body = TRUE;
+        if ( err == 0 ) {
+            //http_error(404,response);
+            include_body = FALSE;
+        }
+        
     } else if ( g_strcmp0(url[3],"dump") == 0 ) {
         // serve memory dump
-        //open file, save sescriptor and set size
+        //open file, save descriptor and set size
         include_body = FALSE;
+        
     } else {
         root = xmlNewNode(NULL, BAD_CAST "error");
         //err
         include_body = TRUE;
+        
     }
 
     xmlDocSetRootElement(doc, root);
 
     if (include_body) {
         xmlDocDumpFormatMemory(doc, (xmlChar**)&response->body, &body_len, 1);
-    }
+    } //else = NULL
 
     xmlFreeDoc(doc);
     xmlCleanupParser();
+    g_free(path);
+    g_free(full_path);
     g_strfreev(url);
     g_strfreev(options);
 
@@ -551,13 +590,24 @@ int fill_crash_details(const char* dir_name, xmlNodePtr root)
     struct crash_item *item;
 //     xmlNodePtr node;
 
-    int sv_logmode = logmode;
-    //logmode = 0; /* suppress EPERM/EACCES errors in opendir */
-    struct dump_dir *dd = dd_opendir(dir_name, /*flags:*/ DD_OPEN_READONLY&DD_FAIL_QUIETLY_ENOENT);
-    logmode = sv_logmode;
-
-    crash_data = create_crash_data_from_dump_dir(dd);
-    dd_close(dd);
+    DIR *dir = opendir(dir_name);
+    
+    if (dir != NULL) {
+        int sv_logmode = logmode;
+        logmode = 0; /* suppress EPERM/EACCES errors in opendir */
+        struct dump_dir *dd = dd_opendir(dir_name, /*flags:*/ DD_OPEN_READONLY );
+        logmode = sv_logmode;
+        
+        if ( dd==NULL )  {
+            return 0;
+        }
+        
+        crash_data = create_crash_data_from_dump_dir(dd);
+        dd_close(dd);
+        
+    } else {
+        return 0;
+    }
 
     keys = g_hash_table_get_keys(crash_data);
     keys = p = g_list_sort(keys, (GCompareFunc)strcmp);

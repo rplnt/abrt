@@ -10,18 +10,28 @@ void test() {
     struct http_resp response;
     struct http_req request;
 
-    request.uri = (gchar*)"/problems";
-
+    request.uri = (gchar*)"/problems/";
     api_problems(&request, &response);
-    
     printf("%s", response.body );
+    printf("---------------------------------\n");
+
+    request.uri = (gchar*)"/problems";
+    api_problems(&request, &response);
+    printf("%s", response.body );
+    printf("---------------------------------\n");
+
+    request.uri = (gchar*)"/problems/ccpp-1302483699-2232";
+    api_problems(&request, &response);
+    printf("%s", response.body );
+    printf("---------------------------------\n");
+
+    request.uri = (gchar*)"/problems/trololol";
+    api_problems(&request, &response);
+    printf("%s", response.body );
+    printf("---------------------------------\n");
     
     g_free(response.body);
-    int a = 1;
-    a = fill_crash_details("/var/spool/abrt/ccpp-1302483669-1754aa", NULL);
-    
-    printf("rt: %d\n",a);
-
+ 
     exit(1);
 }
 
