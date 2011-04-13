@@ -125,9 +125,7 @@ if __name__ == "__main__":
     # read required packages from coredump
     try:
         # ToDo: deal with not found build-ids
-        pipe = Popen(["/usr/bin/python",
-                      "/usr/share/abrt-retrace/coredump2packages.py",
-                      "%s/crash/coredump" % savedir,
+        pipe = Popen(["coredump2packages", "%s/crash/coredump" % savedir,
                       "--repos=retrace-%s-%s-%s*" % (distribution, version, arch)],
                      stdout=PIPE).stdout
         section = 0
@@ -196,14 +194,6 @@ if __name__ == "__main__":
     retrace_run(25, ["mock", "init", "-r", mockr])
     retrace_run(26, ["mock", "-r", mockr, "--copyin", "%s/crash" % savedir, "/var/spool/abrt/crash"])
     retrace_run(27, ["mock", "-r", mockr, "shell", "--", "chgrp", "-R", "mockbuild", "/var/spool/abrt/crash"])
-
-    try:
-        rootfile = open("%s/chroot/result/root.log" % workdir, "r")
-        rootlog = rootfile.read()
-        rootfile.close()
-    except Exception as ex:
-        LOG.write("Error reading root log: %s.\n" % ex)
-        rootlog = "Not found"
 
     # generate backtrace
     LOG.write("Generating backtrace... ")
@@ -289,5 +279,4 @@ if __name__ == "__main__":
     LOG.write("OK\n")
     LOG.write("Retrace took %d seconds.\n" % duration)
 
-    LOG.write("\n=== ROOT LOG ===\n%s\n" % rootlog)
     LOG.close()
