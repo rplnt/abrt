@@ -239,10 +239,11 @@ void serve(void* sock, int flags)
 
     write(*(int*)sock, "\r\n", 2);
 
-    if ( response.body != NULL ) {
+    if        ( request.method != HEAD && response.body != NULL ) {
         err = (flags & OPT_SSL) ? SSL_write(sock, response.body, strlen(response.body)):
                                     write(*(int*)sock, response.body, strlen(response.body));
-    } else if ( response.fd != -1 ) {
+                                    
+    } else if ( request.method != HEAD && response.fd != -1 ) {
         while ( (len = read(response.fd, buffer, READ_BUF-1)) > 0 ) {
             err = (flags & OPT_SSL) ? SSL_write(sock, buffer, len):
                                       write(*(int*)sock, buffer, len);
@@ -692,8 +693,8 @@ void generate_response(const struct http_req *request, struct http_resp *respons
             break;
         case HEAD:
             break;
-        case POST:
         case DELETE:
+        case POST:
         case PUT:
         case OPTIONS:
         case TRACE:
@@ -760,7 +761,7 @@ int fill_crash_details(const char* dir_name, xmlNodePtr root)
 
         item = g_hash_table_lookup(crash_data, p->data);
         if (item) {
-            
+
             node = xmlNewNode(NULL, BAD_CAST "item");
             xmlNewProp(node, BAD_CAST "name", BAD_CAST p->data);
 
@@ -830,7 +831,7 @@ void list_problems(xmlNodePtr root)
     g_list_foreach(list, (GFunc)add_problem, root);
 
     
-    // g_list_free_full(list, (GDestroyNotify)free_list); //since 2.28
+    // g_list_free_full(list, (GDestroyNotify)free_list); //since glib 2.28
     g_list_foreach(list, (GFunc)free_list, NULL);
     g_list_free(list);
 }
@@ -868,6 +869,7 @@ GList* create_list(GList *list, char* dir_name)
                     time = dd_load_text(dd, "time");
                     problem = g_try_malloc(sizeof(problem_t));
                     if ( problem == NULL ) {
+                        //TODO
                         //break, clean and respond with error somehow
                         //return NULL; //can't - would lost list :/
                     }
@@ -909,21 +911,21 @@ void add_problem(problem_t *problem, xmlNodePtr root)
     xmlNewProp(node, BAD_CAST "id", BAD_CAST problem->id);
     xmlNewProp(node, BAD_CAST "href", BAD_CAST href);
 
-    /* time */
-    child = xmlNewNode(NULL, BAD_CAST "item");
-    xmlNewProp(child, BAD_CAST "name", BAD_CAST "time");
-    xmlNewProp(child, BAD_CAST "type", BAD_CAST "unixtime");
-    //xmlNewProp(child, BAD_CAST "format", BAD_CAST "%s");
-    text = xmlNewText(BAD_CAST problem->time);
-    xmlAddChild(child, text);
-    xmlAddChild(node, child);
+        /* time */
+        child = xmlNewNode(NULL, BAD_CAST "item");
+        xmlNewProp(child, BAD_CAST "name", BAD_CAST "time");
+        xmlNewProp(child, BAD_CAST "type", BAD_CAST "unixtime");
+        //xmlNewProp(child, BAD_CAST "format", BAD_CAST "%s");
+        text = xmlNewText(BAD_CAST problem->time);
+        xmlAddChild(child, text);
+        xmlAddChild(node, child);
 
-    /* reason */
-    child = xmlNewNode(NULL, BAD_CAST "item");
-    xmlNewProp(child, BAD_CAST "name", BAD_CAST "reason");
-    text = xmlNewText(BAD_CAST problem->reason);
-    xmlAddChild(child, text);
-    xmlAddChild(node, child);
+        /* reason */
+        child = xmlNewNode(NULL, BAD_CAST "item");
+        xmlNewProp(child, BAD_CAST "name", BAD_CAST "reason");
+        text = xmlNewText(BAD_CAST problem->reason);
+        xmlAddChild(child, text);
+        xmlAddChild(node, child);
 
     xmlAddChild(root, node);
 
