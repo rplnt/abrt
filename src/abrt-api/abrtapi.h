@@ -62,7 +62,6 @@
 #define pass (0)
 
 #define API_VERSION "0.1"
-#define TIME_FORMAT "%Y/%m/%d  %H:%M:%S" //one day it might be an option
 
 /* problem summary */
 typedef struct problem_summary  {

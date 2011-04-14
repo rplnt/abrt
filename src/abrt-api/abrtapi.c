@@ -536,10 +536,10 @@ int api_problems(const struct http_req* request, struct http_resp* response)
             include_body = FALSE;
         }
         
-    } else if ( g_strcmp0(url[3],"dump") == 0 ) {
-        // serve memory dump
+    } else {
+        // serve binary data
         include_body = FALSE;
-        full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], "coredump", NULL);
+        full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], url[3], NULL);
         ret = open(full_path, O_RDONLY);
         if ( ret == -1 ) {
             g_free(full_path);
@@ -556,9 +556,6 @@ int api_problems(const struct http_req* request, struct http_resp* response)
             response->fd = ret;
         }
         
-    } else {
-        http_error(response, 404);
-        include_body = FALSE;
     }
 
     if (include_body) {
@@ -764,42 +761,38 @@ int fill_crash_details(const char* dir_name, xmlNodePtr root)
         item = g_hash_table_lookup(crash_data, p->data);
         if (item) {
             
-            node = xmlNewNode(NULL, BAD_CAST "property");
+            node = xmlNewNode(NULL, BAD_CAST "item");
             xmlNewProp(node, BAD_CAST "name", BAD_CAST p->data);
 
-            /* text containing newlines */
-            if ( strrchr(item->content, '\n') != NULL )  {
-                xmlNewProp(node, BAD_CAST "type", BAD_CAST "text");
+            /* unixtime */
+            if        ( item->flags & CD_FLAG_UNIXTIME )  {
+                xmlNewProp(node, BAD_CAST "type", BAD_CAST "unixtime");
+                //xmlNewProp(node, BAD_CAST "format", BAD_CAST "%s");
                 text = xmlNewText(BAD_CAST item->content);
                 xmlAddChild(node, text);
 
-            /* unix time stamp */
-            } else if ( g_strcmp0(p->data,"time") == 0 ) {
-                xmlNewProp(node, BAD_CAST "type", BAD_CAST "time");
-                xmlNewProp(node, BAD_CAST "format", BAD_CAST "%s");
+            /* text */
+            } else if ( item->flags & CD_FLAG_TXT ) {
+                xmlNewProp(node, BAD_CAST "type", BAD_CAST "txt");
                 text = xmlNewText(BAD_CAST item->content);
                 xmlAddChild(node, text);
 
-            /* integer */
-            } else if ( strspn(item->content,"0123456789") == strlen(item->content) ) {
-                xmlNewProp(node, BAD_CAST "type", BAD_CAST "integer");
-                xmlNewProp(node, BAD_CAST "value", BAD_CAST item->content);
-
-            /* coredump */
-            } else if ( g_strcmp0(p->data,"coredump") == 0 ) {
+            /* binary */
+            } else if ( item->flags & CD_FLAG_BIN ) {
                 gchar **parts = g_strsplit(dir_name, "/", -1);
                 gchar *id = parts[g_strv_length(parts)-1];
-                gchar *full_path = g_strjoin("/", "/api/problems", id, "dump", NULL);
+                gchar *full_path = g_strjoin("/", "/api/problems", id, p->data, NULL);
                 
-                xmlNewProp(node, BAD_CAST "type", BAD_CAST "data");
+                xmlNewProp(node, BAD_CAST "type", BAD_CAST "binary");
                 xmlNewProp(node, BAD_CAST "href", BAD_CAST full_path);
+                xmlNewProp(node, BAD_CAST "rel", BAD_CAST "download");
                 
                 g_strfreev(parts);
                 g_free(full_path);
 
-            /* everything else is treated as line of text */
+            /* something else */
             } else {
-                xmlNewProp(node, BAD_CAST "type", BAD_CAST "line");
+                xmlNewProp(node, BAD_CAST "type", BAD_CAST "unknown");
                 text = xmlNewText(BAD_CAST item->content);
                 xmlAddChild(node, text);
             }
@@ -904,30 +897,37 @@ GList* create_list(GList *list, char* dir_name)
 /* this will add <problem> to an xml tree */
 void add_problem(problem_t *problem, xmlNodePtr root)
 {
-    char *end;
     char *href;
-    char time_str[256];
     xmlNodePtr node = NULL;
-    xmlNodePtr time_node = NULL;
-    time_t time;
+    xmlNodePtr text = NULL;
+    xmlNodePtr child = NULL;
 
-    time = strtol(problem->time, &end, 10);
-    if (!errno && !*end && end != problem->time) {
-        if ( strftime(time_str, sizeof(time_str), TIME_FORMAT, localtime(&time)) ) {
-            href =  g_strjoin("/", "/problems", problem->id, NULL);
-            node = xmlNewNode(NULL, BAD_CAST "problem");
+    href =  g_strjoin("/", "/problems", problem->id, NULL);
 
-            xmlNewProp(node, BAD_CAST "id", BAD_CAST problem->id);
-            xmlNewProp(node, BAD_CAST "href", BAD_CAST href);
-            xmlNewChild(node, NULL, BAD_CAST "reason", BAD_CAST problem->reason);
-            time_node = xmlNewChild(node, NULL, BAD_CAST "time", BAD_CAST time_str);
-            xmlNewProp(time_node, BAD_CAST "format", BAD_CAST TIME_FORMAT);
+    /* problem */
+    node = xmlNewNode(NULL, BAD_CAST "problem");
+    xmlNewProp(node, BAD_CAST "id", BAD_CAST problem->id);
+    xmlNewProp(node, BAD_CAST "href", BAD_CAST href);
 
-            xmlAddChild(root, node);
+    /* time */
+    child = xmlNewNode(NULL, BAD_CAST "item");
+    xmlNewProp(child, BAD_CAST "name", BAD_CAST "time");
+    xmlNewProp(child, BAD_CAST "type", BAD_CAST "unixtime");
+    //xmlNewProp(child, BAD_CAST "format", BAD_CAST "%s");
+    text = xmlNewText(BAD_CAST problem->time);
+    xmlAddChild(child, text);
+    xmlAddChild(node, child);
 
-            g_free(href);
-        }
-    }
+    /* reason */
+    child = xmlNewNode(NULL, BAD_CAST "item");
+    xmlNewProp(child, BAD_CAST "name", BAD_CAST "reason");
+    text = xmlNewText(BAD_CAST problem->reason);
+    xmlAddChild(child, text);
+    xmlAddChild(node, child);
+
+    xmlAddChild(root, node);
+
+    g_free(href);
     
 }
 

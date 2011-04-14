@@ -324,7 +324,7 @@ static void passthrough(GMarkupParseContext *context,
 
 // Called on error, including one set by other
 // methods in the vtable. The GError should not be freed.
-static error(GMarkupParseContext *context,
+static void error(GMarkupParseContext *context,
           GError *error,
           gpointer user_data)
 {

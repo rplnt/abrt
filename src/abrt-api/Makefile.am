@@ -1,10 +1,10 @@
-bin_PROGRAMS = abrt-api
+bin_PROGRAMS = abrt-http
 
-abrt_api_SOURCES = \
+abrt_http_SOURCES = \
     main.c \
     abrtapi.h abrtapi.c \
     http.h
-abrt_api_CPPFLAGS = \
+abrt_http_CPPFLAGS = \
     -I$(srcdir)/../include/report -I$(srcdir)/../include \
     -I$(srcdir)/../lib \
     $(LIBXML_CFLAGS) \
@@ -14,7 +14,7 @@ abrt_api_CPPFLAGS = \
     -Wall -Wwrite-strings -Werror \
     -DDEBUG_DUMPS_DIR=\"$(DEBUG_DUMPS_DIR)\"
 #    $(GTK_CFLAGS)
-abrt_api_LDADD = \
+abrt_http_LDADD = \
     ../lib/libreport.la \
     $(GLIB_LIBS) \
     $(LIBXML_LIBS) \
