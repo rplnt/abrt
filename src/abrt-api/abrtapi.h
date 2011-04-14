@@ -119,8 +119,9 @@ char *rm_slash(const char *path);
 
 bool http_authentize(const struct http_req *request);
 struct http_resp* http_add_header(struct http_resp* response, const gchar* header_line, ...);
-struct http_resp* http_error(struct http_resp* response, int error);
-void http_response(struct http_resp *resp, int code);
+struct http_resp* http_error(struct http_resp* resp, short error);
+void http_response(struct http_resp *resp, short code);
+gchar *http_get_code_text(short int code);
                 
 int api_entry_point(const struct http_req* request, struct http_resp* response);
 int api_problems(const struct http_req* request, struct http_resp* response);

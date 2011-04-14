@@ -168,7 +168,7 @@ void serve(void* sock, int flags)
     GString *headers = g_string_sized_new(READ_BUF);
     GString *body = NULL;
     struct http_req request = { UNDEFINED, NULL, NULL, NULL, NULL };
-    struct http_resp response = { UNDECLARED, NULL, NULL, NULL/*, -1*/ };
+    struct http_resp response = { UNDECLARED, NULL, NULL, NULL, -1 };
     
     while ( true ) {
         err = (flags & OPT_SSL) ? SSL_read(sock, buffer, READ_BUF-1):
@@ -222,6 +222,7 @@ void serve(void* sock, int flags)
 
     generate_response(&request, &response);
 
+    /* write headers */
     if ( flags & OPT_SSL ) {
         //TODO err
         err = SSL_write(sock, response.response_line, strlen(response.response_line));
@@ -236,6 +237,7 @@ void serve(void* sock, int flags)
 
     write(*(int*)sock, "\r\n", 2);
 
+    /* message body */
     if        ( request.method != HEAD && response.body != NULL ) {
         err = (flags & OPT_SSL) ? SSL_write(sock, response.body, strlen(response.body)):
                                     write(*(int*)sock, response.body, strlen(response.body));
@@ -577,11 +579,22 @@ int api_problems(const struct http_req* request, struct http_resp* response)
 }
 
 
-/* do basic authentification against PAM and lower privileges */
+
+/* do basic authentication against PAM and lower privileges */
 bool http_authentize(const struct http_req *request)
 {
-    return true;
+    gchar *h = g_hash_table_lookup(request->header_options, "authorization");
+
+    if (h) {
+        fprintf(stderr,"auth: %s", h);
+        fflush(stderr);
+        return true;
+    }
+
+    return false;    
+    
 }
+
 
 
 /*
@@ -600,12 +613,18 @@ struct http_resp* http_add_header(struct http_resp* response, const gchar* heade
     g_string_append_vprintf(response->head, header_line, arguments);
     response->head = g_string_append(response->head, "\r\n");
 
-    va_end ( arguments );
+    va_end (arguments);
     
     return response;
 }
 
-gchar *http_get_code_text(int code)
+
+
+/*
+ * return text representation of code
+ * used in: response line and error messages
+ */
+gchar *http_get_code_text(short code)
 {
     gchar *name;
     
@@ -633,8 +652,11 @@ gchar *http_get_code_text(int code)
     return name;
 }
 
-/* fill out http response line */
-void http_response(struct http_resp *resp, int code)
+
+
+
+/* fill out response line */
+void http_response(struct http_resp *resp, short code)
 {
     gchar *code_text = NULL;
     
@@ -652,11 +674,12 @@ void http_response(struct http_resp *resp, int code)
 }
 
 
+
 /*
  * fill out complete(?) response according to error
  * previous contents will be cleared
  */
-struct http_resp* http_error(struct http_resp* resp, int error)
+struct http_resp* http_error(struct http_resp* resp, short error)
 {
     g_free(resp->body);
     if (resp->head != NULL ) {
@@ -690,6 +713,15 @@ struct http_resp* http_error(struct http_resp* resp, int error)
     http_add_header(resp, "Content-Length: %d", body_len);
     http_add_header(resp, "Connection: close");
 
+    /* additional headers */
+    switch (error) {
+        case 401:
+            http_add_header(resp, "WWW-Authenticate: Basic");
+            break;
+        default:
+            break;        
+    }
+
     xmlFreeDoc(doc);
     xmlCleanupParser();
     g_free(error_text);
@@ -700,7 +732,7 @@ struct http_resp* http_error(struct http_resp* resp, int error)
 
 
 /*
- * prepare ready-to-send http response
+ * prepare ready-to-send response
  */
 void generate_response(const struct http_req *request, struct http_resp *response)
 {
