@@ -23,7 +23,7 @@ enum http_response_code {
     ACCEPTED = 202,
     
     BAD_REQUEST = 400, //~bad syntax~ change request
-    UNAUTHORIZED = 402, //send WWW-Authenticate
+    UNAUTHORIZED = 401, //send WWW-Authenticate
     FORBIDDEN = 403,
     NOT_FOUND = 404,
     NOT_ALLOWED = 405, //method not allowed
@@ -50,7 +50,7 @@ static char allowed_uri_chars[];
 
 struct http_resp {
     enum http_response_code code;
-    gchar *reponse_line;
+    gchar *response_line;
     GString *head;
     gchar *body; //NULL if body is empty
     int fd; //TODO

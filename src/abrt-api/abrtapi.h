@@ -16,6 +16,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -107,7 +108,7 @@ int hash_method(gchar *methodstr);
 
 ////TODO Clean Up & Comment
 
-bool validate_request(const struct http_req *request);
+int validate_request(const struct http_req *request);
 void generate_response(const struct http_req *request, struct http_resp *response);
 int fill_crash_details(const char* dir_name, xmlNodePtr root /* TODO XML */);
 void list_problems(xmlNodePtr root);
@@ -118,8 +119,8 @@ int switch_route(const gchar *url);
 char *rm_slash(const char *path);
 
 bool http_authentize(const struct http_req *request);
-struct http_resp* http_add_header(const gchar* header_line, struct http_resp* response);
-struct http_resp* http_error(enum http_method error, struct http_resp* response);
+struct http_resp* http_add_header(struct http_resp* response, const gchar* header_line, ...);
+struct http_resp* http_error(struct http_resp* response, int error);
                 
 int api_entry_point(const struct http_req* request, struct http_resp* response);
 int api_problems(const struct http_req* request, struct http_resp* response);

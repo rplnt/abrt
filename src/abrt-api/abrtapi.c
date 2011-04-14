@@ -168,7 +168,7 @@ void serve(void* sock, int flags)
     GString *headers = g_string_sized_new(READ_BUF);
     GString *body = NULL;
     struct http_req request = { UNDEFINED, NULL, NULL, NULL, NULL };
-//     struct http_resp response = { UNDECLARED, NULL, NULL, NULL/*, -1*/ };
+    struct http_resp response = { UNDECLARED, NULL, NULL, NULL/*, -1*/ };
     
     while ( true ) {
         err = (flags & OPT_SSL) ? SSL_read(sock, buffer, READ_BUF-1):
@@ -220,13 +220,37 @@ void serve(void* sock, int flags)
         request.body = body; //save body
     }
 
-    //pass http_req, recieve http_resp
-    //send http_resp
+    generate_response(&request, &response);
+
+    if ( flags & OPT_SSL ) {
+        //TODO err
+        err = SSL_write(sock, response.response_line, strlen(response.response_line));
+        printf("\n%d ", err);
+        err = SSL_write(sock, "\r\n", 2);
+        printf("%d ", err);
+        err = SSL_write(sock, response.head->str , strlen(response.head->str));
+        printf("%d\n", err);
+    } else {
+        //TODO err
+        err = write(*(int*)sock, response.response_line, strlen(response.response_line));
+        err = write(*(int*)sock, "\r\n", 2);
+        err = write(*(int*)sock, response.head->str , strlen(response.head->str));
+    }
+
+    write(*(int*)sock, "\r\n", 2);
+
+    if ( response.body != NULL ) {
+        err = (flags & OPT_SSL) ? SSL_write(sock, response.body, strlen(response.body)):
+                                    write(*(int*)sock, response.body, strlen(response.body));
+    } else if ( response.fd != -1 ) {
+        while ( (len = read(response.fd, buffer, READ_BUF-1)) > 0 ) {
+            err = (flags & OPT_SSL) ? SSL_write(sock, buffer, len):
+                                      write(*(int*)sock, buffer, len);
+        }
+    }
 
 
-
-    
-    /* free memory */
+    /* free request's memory */
     if ( request.method != UNDEFINED ) {
         /* check */
         printf("Requested path: %s\nOptions:\n", request.uri);
@@ -260,7 +284,7 @@ void parse_head(struct http_req* request, const GString* headers)
 
     const char allowed_uri_chars[] = "0123456789\
                                    abcdefghijklmnopqrstuvwxyz\
-                                   ;/?:@=&.%";
+                                   ;/?:@=&.%-";
     const char *method_names[] = { "GET", "POST", "DELETE", "HEAD",
                                 "PUT", "OPTIONS", "TRACE", "CONNECT", NULL    
     };
@@ -383,9 +407,11 @@ stop:
 
 
 /* TODO */
-bool validate_request(const struct http_req *request)
+int validate_request(const struct http_req *request)
 {
     gchar **url;
+
+    //TODO Host: ??
 
     /*  one or zero '?' in url */
     url = g_strsplit(request->uri,"?",-1);
@@ -452,6 +478,9 @@ int api_entry_point(const struct  http_req *request, struct http_resp *response)
     /* copy it to http_resp */
     xmlDocDumpFormatMemory(doc, (xmlChar**)&response->body, &body_len, 1);
 
+    response->response_line = g_strdup("HTTP/1.0 200 OK");
+    response->code = 200;
+    http_add_header(response, "Content-Length: %d", body_len);
     
     xmlFreeDoc(doc);
     xmlCleanupParser();
@@ -503,7 +532,7 @@ int api_problems(const struct http_req* request, struct http_resp* response)
 
         include_body = TRUE;
         if ( ret == 0 ) {
-            http_error(404, response);
+            http_error(response, 404);
             include_body = FALSE;
         }
         
@@ -519,7 +548,7 @@ int api_problems(const struct http_req* request, struct http_resp* response)
         }
 
         if ( ret == -1 ) {
-            http_error(404, response);
+            http_error(response, 404);
         } else {
             struct stat buf;
             fstat(ret, &buf);
@@ -528,14 +557,19 @@ int api_problems(const struct http_req* request, struct http_resp* response)
         }
         
     } else {
-        root = xmlNewNode(NULL, BAD_CAST "error");
-        //append some error message
-        include_body = TRUE;
+        http_error(response, 404);
+        include_body = FALSE;
     }
 
     if (include_body) {
         xmlDocSetRootElement(doc, root);
         xmlDocDumpFormatMemory(doc, (xmlChar**)&response->body, &body_len, 1);
+    }
+
+    if ( response->code == UNDECLARED ) {
+        response->response_line = g_strdup("HTTP/1.0 200 OK");
+        response->code = 200;
+        http_add_header(response, "Content-Length: %d", body_len);
     }
 
     xmlFreeDoc(doc);
@@ -558,10 +592,23 @@ bool http_authentize(const struct http_req *request)
 
 
 /*
+ * DO NOT add headers any other way
+ * 
  * add given line to response's headers and terminate with CR-LF
  */
-struct http_resp* http_add_header(const gchar* header_line, struct http_resp* response)
+struct http_resp* http_add_header(struct http_resp* response, const gchar* header_line, ...)
 {
+    va_list arguments;
+    va_start (arguments, header_line);
+
+    if ( response->head == NULL ) {
+        response->head = g_string_sized_new(256);
+    }
+    g_string_append_vprintf(response->head, header_line, arguments);
+    response->head = g_string_append(response->head, "\r\n");
+
+    va_end ( arguments );
+    
     return response;
 }
 
@@ -570,9 +617,62 @@ struct http_resp* http_add_header(const gchar* header_line, struct http_resp* re
  * fill out complete(?) response according to error
  * previous contents will be cleared
  */
-struct http_resp* http_error(enum http_method error, struct http_resp* response)
+struct http_resp* http_error(struct http_resp* resp, int error)
 {
-    return response;
+    g_free(resp->body);
+    g_free(resp->response_line);
+    if (resp->head != NULL ) {
+        g_string_free(resp->head, TRUE);
+        resp->head = NULL;
+    }
+    resp->fd = -1;
+
+    resp->code = error;
+
+    xmlDocPtr doc   = NULL;
+    xmlNodePtr root = NULL;
+    xmlNodePtr text = NULL;
+    int body_len;
+
+    doc = xmlNewDoc(BAD_CAST "1.0");
+    root = xmlNewNode(NULL, BAD_CAST "error");
+    
+    switch (error) {
+        case 400:
+            resp->response_line = g_strdup("HTTP/1.0 400 Bad Request");
+            xmlNewProp(root, BAD_CAST "code", BAD_CAST "400");
+            text = xmlNewText(BAD_CAST "Bad Request");
+            break;
+        case 401:
+            resp->response_line = g_strdup("HTTP/1.0 401 Authorization Required");
+            xmlNewProp(root, BAD_CAST "code", BAD_CAST "401");
+            text = xmlNewText(BAD_CAST "Authorization Required");
+            http_add_header(resp, "WWW-Authenticate: Basic");
+            break;
+        case 404:
+            resp->response_line = g_strdup("HTTP/1.0 404 Not Found");
+            xmlNewProp(root, BAD_CAST "code", BAD_CAST "404");
+            text = xmlNewText(BAD_CAST "Not Found");
+            break;
+        case 501:
+            resp->response_line = g_strdup("HTTP/1.0 501 Not Implemented");
+            xmlNewProp(root, BAD_CAST "code", BAD_CAST "501");
+            text = xmlNewText(BAD_CAST "Not Implemented");
+            break;
+        
+    }
+    xmlAddChild(root, text);
+
+    //TODO copy xml to response + add len
+    xmlDocSetRootElement(doc, root);
+    xmlDocDumpFormatMemory(doc, (xmlChar**)&resp->body, &body_len, 1);
+    xmlFreeDoc(doc);
+    xmlCleanupParser();
+
+    http_add_header(resp, "Content-Length: %d",body_len);
+    http_add_header(resp, "Connection: close");
+    
+    return resp;
 }
 
 
@@ -581,31 +681,49 @@ struct http_resp* http_error(enum http_method error, struct http_resp* response)
  */
 void generate_response(const struct http_req *request, struct http_resp *response)
 {
-    int c_len;
     
     if ( !http_authentize(request) ) {
-        http_error(402, response);
+        http_error(response, 401);
+        return;
+    }
+
+    switch ( request->method ) {
+        case UNDEFINED:
+            http_error(response, 400);
+            break;
+        case GET:
+            break;
+        case HEAD:
+            break;
+        case POST:
+        case DELETE:
+        case PUT:
+        case OPTIONS:
+        case TRACE:
+        case CONNECT:
+            http_error(response, 501);
+    }
+
+    if ( response->code != UNDECLARED ) {
         return;
     }
 
     /* switch "first level" */
     switch ( switch_route(request->uri) ) {
         case 0: //root node
-            c_len = api_entry_point(request,response);
+            api_entry_point(request,response);
             break;
         case 1: //problems
-            c_len = api_problems(request,response);
+            api_problems(request,response);
             break;
         case -1: //unknown
-        default: //broken api
-            http_error(404, response);
+        default: //broken
+            http_error(response, 404);
             break;
     }
-    
 
 
 }
-
 
 
 /* will read whole dir and append all problems to XML tree */

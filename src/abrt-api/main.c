@@ -1,5 +1,6 @@
 #include "abrtapi.h"
 
+
 void test() {
 
 //     gchar **str;
@@ -7,32 +8,43 @@ void test() {
 //     printf("%d\n", switch_route("/problems"));
 //     g_strfreev(str);
 
-    struct http_resp response;
-    struct http_req request;
+    
+    struct http_req request = { UNDEFINED, NULL, NULL, NULL, NULL };
+    struct http_resp response = { UNDECLARED, NULL, NULL, NULL, -1 };
 
-    request.uri = (gchar*)"/problems/";
-    api_problems(&request, &response);
-    printf("%s", response.body );
-    printf("---------------------------------\n");
-    response.body = NULL;
-
-    request.uri = (gchar*)"/problems";
-    api_problems(&request, &response);
-    printf("%s", response.body );
-    printf("---------------------------------\n");
-    response.body = NULL;
-
-    request.uri = (gchar*)"/problems/ccpp-1302483699-2232";
-    api_problems(&request, &response);
-    printf("%s", response.body );
-    printf("---------------------------------\n");
-    response.body = NULL;
+//     request.uri = (gchar*)"/problems/";
+//     api_problems(&request, &response);
+//     printf("%s", response.body );
+//     printf(" --------------------------------\n");
+//     printf("%s", response.head->str );
+//     printf(" --------------------------------\n");
+//     g_free(response.body);
+//     response.body = NULL;
+// 
+//     request.uri = (gchar*)"/problems";
+//     api_problems(&request, &response);
+//     printf("%s", response.body );
+//     printf("---------------------------------\n");
+//     printf("%s", response.head->str );
+//     printf(" --------------------------------\n");
+//     g_free(response.body);
+//     response.body = NULL;
+// 
+//     request.uri = (gchar*)"/problems/ccpp-1302483699-2232";
+//     api_problems(&request, &response);
+//     printf("%s", response.body );
+//     printf("---------------------------------\n");
+//     printf("%s", response.head->str );
+//     printf(" --------------------------------\n");
+//     g_free(response.body);
+//     response.body = NULL;
 
     request.uri = (gchar*)"/problems/trololol";
     api_problems(&request, &response);
     printf("%s", response.body );
     printf("---------------------------------\n");
-    response.body = NULL;
+    printf("%s", response.head->str );
+    printf(" --------------------------------\n");
     
     g_free(response.body);
  
@@ -42,7 +54,7 @@ void test() {
 
 int main(int argc, char **argv)
 {
-    test();
+    //test();
     int flags=0; //config flags
     char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket
