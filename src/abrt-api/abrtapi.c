@@ -226,14 +226,11 @@ void serve(void* sock, int flags)
         //TODO err
         err = SSL_write(sock, response.response_line, strlen(response.response_line));
         printf("\n%d ", err);
-        err = SSL_write(sock, "\r\n", 2);
-        printf("%d ", err);
         err = SSL_write(sock, response.head->str , strlen(response.head->str));
         printf("%d\n", err);
     } else {
         //TODO err
         err = write(*(int*)sock, response.response_line, strlen(response.response_line));
-        err = write(*(int*)sock, "\r\n", 2);
         err = write(*(int*)sock, response.head->str , strlen(response.head->str));
     }
 
@@ -479,8 +476,7 @@ int api_entry_point(const struct  http_req *request, struct http_resp *response)
     /* copy it to http_resp */
     xmlDocDumpFormatMemory(doc, (xmlChar**)&response->body, &body_len, 1);
 
-    response->response_line = g_strdup("HTTP/1.0 200 OK");
-    response->code = 200;
+    http_response(response, 200);
     http_add_header(response, "Content-Length: %d", body_len);
     
     xmlFreeDoc(doc);
@@ -565,8 +561,7 @@ int api_problems(const struct http_req* request, struct http_resp* response)
     }
 
     if ( response->code == UNDECLARED ) {
-        response->response_line = g_strdup("HTTP/1.0 200 OK");
-        response->code = 200;
+        http_response(response, 200);
         http_add_header(response, "Content-Length: %d", body_len);
     }
 
@@ -610,6 +605,52 @@ struct http_resp* http_add_header(struct http_resp* response, const gchar* heade
     return response;
 }
 
+gchar *http_get_code_text(int code)
+{
+    gchar *name;
+    
+    switch (code) {
+        case 200:
+            name = g_strdup("OK");
+            break;
+        case 400:
+            name = g_strdup("Bad Request");
+            break;
+        case 401:
+            name = g_strdup("Authorization Required");
+            break;
+        case 404:
+            name = g_strdup("Not Found");
+            break;
+        case 501:
+            name = g_strdup("Not Implemented");
+            break;
+        default:
+            name = g_strdup("Unknown");
+            break;
+    }
+
+    return name;
+}
+
+/* fill out http response line */
+void http_response(struct http_resp *resp, int code)
+{
+    gchar *code_text = NULL;
+    
+    if ( resp->response_line != NULL ) {
+        g_free(resp->response_line);
+    }
+
+    resp->code = code;
+    code_text = http_get_code_text(code);
+
+    resp->response_line = g_strdup_printf("HTTP/1.0 %d %s\r\n", code, code_text);
+
+    g_free(code_text);
+    
+}
+
 
 /*
  * fill out complete(?) response according to error
@@ -618,15 +659,14 @@ struct http_resp* http_add_header(struct http_resp* response, const gchar* heade
 struct http_resp* http_error(struct http_resp* resp, int error)
 {
     g_free(resp->body);
-    g_free(resp->response_line);
     if (resp->head != NULL ) {
         g_string_free(resp->head, TRUE);
         resp->head = NULL;
     }
     resp->fd = -1;
 
-    resp->code = error;
-
+    gchar *error_text;
+    gchar *code_text;
     xmlDocPtr doc   = NULL;
     xmlNodePtr root = NULL;
     xmlNodePtr text = NULL;
@@ -634,41 +674,26 @@ struct http_resp* http_error(struct http_resp* resp, int error)
 
     doc = xmlNewDoc(BAD_CAST "1.0");
     root = xmlNewNode(NULL, BAD_CAST "error");
-    
-    switch (error) {
-        case 400:
-            resp->response_line = g_strdup("HTTP/1.0 400 Bad Request");
-            xmlNewProp(root, BAD_CAST "code", BAD_CAST "400");
-            text = xmlNewText(BAD_CAST "Bad Request");
-            break;
-        case 401:
-            resp->response_line = g_strdup("HTTP/1.0 401 Authorization Required");
-            xmlNewProp(root, BAD_CAST "code", BAD_CAST "401");
-            text = xmlNewText(BAD_CAST "Authorization Required");
-            http_add_header(resp, "WWW-Authenticate: Basic");
-            break;
-        case 404:
-            resp->response_line = g_strdup("HTTP/1.0 404 Not Found");
-            xmlNewProp(root, BAD_CAST "code", BAD_CAST "404");
-            text = xmlNewText(BAD_CAST "Not Found");
-            break;
-        case 501:
-            resp->response_line = g_strdup("HTTP/1.0 501 Not Implemented");
-            xmlNewProp(root, BAD_CAST "code", BAD_CAST "501");
-            text = xmlNewText(BAD_CAST "Not Implemented");
-            break;
-        
-    }
-    xmlAddChild(root, text);
 
-    //TODO copy xml to response + add len
+    http_response(resp, error);
+    error_text = http_get_code_text(error);
+    code_text = g_strdup_printf("%d", error);
+
+    xmlNewProp(root, BAD_CAST "code", BAD_CAST code_text);
+    text = xmlNewText(BAD_CAST error_text);
+
+    xmlAddChild(root, text);
     xmlDocSetRootElement(doc, root);
+    
     xmlDocDumpFormatMemory(doc, (xmlChar**)&resp->body, &body_len, 1);
+    
+    http_add_header(resp, "Content-Length: %d", body_len);
+    http_add_header(resp, "Connection: close");
+
     xmlFreeDoc(doc);
     xmlCleanupParser();
-
-    http_add_header(resp, "Content-Length: %d",body_len);
-    http_add_header(resp, "Connection: close");
+    g_free(error_text);
+    g_free(code_text);
     
     return resp;
 }
