@@ -1,60 +1,8 @@
 #include "abrtapi.h"
 
 
-void test() {
-
-//     gchar **str;
-//     str = g_strsplit("/there is nothing here","/",-1);
-//     printf("%d\n", switch_route("/problems"));
-//     g_strfreev(str);
-
-    
-    struct http_req request = { UNDEFINED, NULL, NULL, NULL, NULL };
-    struct http_resp response = { UNDECLARED, NULL, NULL, NULL, -1 };
-
-//     request.uri = (gchar*)"/problems/";
-//     api_problems(&request, &response);
-//     printf("%s", response.body );
-//     printf(" --------------------------------\n");
-//     printf("%s", response.head->str );
-//     printf(" --------------------------------\n");
-//     g_free(response.body);
-//     response.body = NULL;
-// 
-//     request.uri = (gchar*)"/problems";
-//     api_problems(&request, &response);
-//     printf("%s", response.body );
-//     printf("---------------------------------\n");
-//     printf("%s", response.head->str );
-//     printf(" --------------------------------\n");
-//     g_free(response.body);
-//     response.body = NULL;
-// 
-//     request.uri = (gchar*)"/problems/ccpp-1302483699-2232";
-//     api_problems(&request, &response);
-//     printf("%s", response.body );
-//     printf("---------------------------------\n");
-//     printf("%s", response.head->str );
-//     printf(" --------------------------------\n");
-//     g_free(response.body);
-//     response.body = NULL;
-
-    request.uri = (gchar*)"/problems/trololol";
-    api_problems(&request, &response);
-    printf("%s", response.body );
-    printf("---------------------------------\n");
-    printf("%s", response.head->str );
-    printf(" --------------------------------\n");
-    
-    g_free(response.body);
- 
-    exit(1);
-}
-
-
 int main(int argc, char **argv)
 {
-    //test();
     int flags=0; //config flags
     char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket
@@ -212,7 +160,7 @@ int main(int argc, char **argv)
                 SSL_set_accept_state(ssl);
                 if ( SSL_accept(ssl) == 1 ) {
                     //while whatever serve
-                    serve(ssl, flags);
+                    while ( serve(ssl, flags) );
                     //TODO errors
                     SSL_shutdown(ssl);
                 }
@@ -220,7 +168,7 @@ int main(int argc, char **argv)
                 SSL_CTX_free(ctx);
             } else {
                 //while whatever serve
-                serve(&sockfd_in, flags);
+                while ( serve(&sockfd_in, flags) );
             }
 
             close(sockfd_in);

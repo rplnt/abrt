@@ -15,30 +15,26 @@ enum http_method {
     TRACE,
     CONNECT
 };
+typedef enum http_method http_method;
 
-enum http_response_code {
-    UNDECLARED = 0,
-    OK = 200,
-    CREATED = 201,
-    ACCEPTED = 202,
-    
-    BAD_REQUEST = 400, //~bad syntax~ change request
-    UNAUTHORIZED = 401, //send WWW-Authenticate
-    FORBIDDEN = 403,
-    NOT_FOUND = 404,
-    NOT_ALLOWED = 405, //method not allowed
-    NOT_ACCEPTABLE = 406, //wrong content type requested
-    LENGTH_REQUIRED = 411, //don't want to allocate memory iterativelly
-    URI_TOO_LONG = 414, //Request-URI Too Long
-    NO_RESPONSE = 444, //troll
-    
-    SERVER_ERROR = 500, //Internal Server Error
-    NOT_IMPLEMENTED = 501, //thank god
-    UNAVAILABLE = 503, //Service Unavailable
+/* response codes */
+enum {
+    UNDECLARED = 0    
 };
 
+/* supported responses */
+enum content_type {
+    XML,
+    PLAIN,
+    HTML,
+    JSON
+};
+typedef enum content_type content_type;
+
+#define DEFAULT_CONTENT_TYPE XML
+
 struct http_req {
-    enum http_method method;
+    http_method method;
     gchar *uri;
 	gchar *version; 
     GHashTable *header_options;
@@ -49,11 +45,12 @@ static char allowed_uri_chars[];
 
 
 struct http_resp {
-    enum http_response_code code;
+    int code;
     gchar *response_line;
     GString *head;
     gchar *body; //NULL if body is empty
-    int fd; //TODO
+    int fd;
+    content_type format;
 };
 
 /* parse headers of the http request
@@ -65,7 +62,7 @@ void parse_head(struct http_req* request, const GString* headers);
 
 void generate_response(const struct http_req *request, struct http_resp *response);
 
-gchar* strcode(enum http_response_code code);
+gchar* strcode(int code);
 
 bool is_valid_method(gchar *methodstr);
 

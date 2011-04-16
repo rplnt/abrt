@@ -86,7 +86,7 @@ void usage_and_exit();
 void sigchld_handler(int sig);
 
 /* test */
-void serve(void *sock, int flags);
+int serve(void* sock, int flags);
 
 /* serve socket */
 void servex(int sockfd_in);
@@ -109,22 +109,36 @@ int hash_method(gchar *methodstr);
 
 int validate_request(const struct http_req *request);
 void generate_response(const struct http_req *request, struct http_resp *response);
-int fill_crash_details(const char* dir_name, xmlNodePtr root /* TODO XML */);
-void list_problems(xmlNodePtr root);
+gchar* fill_crash_details(const char* dir_name, const content_type format);
+gchar* list_problems(content_type format);
 GList* create_list(GList *list, char* dir_name);
 void add_problem(problem_t* problem, xmlNodePtr root);
 void free_list(problem_t *item);
 int switch_route(const gchar *url);
 char *rm_slash(const char *path);
+void add_detail_xml(const gchar* key, const crash_item* item, xmlNodePtr root);
 
 bool http_authentize(const struct http_req *request);
 struct http_resp* http_add_header(struct http_resp* response, const gchar* header_line, ...);
 struct http_resp* http_error(struct http_resp* resp, short error);
 void http_response(struct http_resp *resp, short code);
 gchar *http_get_code_text(short int code);
-                
-int api_entry_point(const struct http_req* request, struct http_resp* response);
-int api_problems(const struct http_req* request, struct http_resp* response);
+void add_problem_xml(const problem_t* problem, xmlNodePtr root);
+int http_get_content_type(const struct http_req *request);
+
+void add_detail_html(const gchar* key, const crash_item* item, GString* content);
+
+void api_entry_point(const struct http_req* request, struct http_resp* response);
+void api_problems(const struct http_req* request, struct http_resp* response);
+
+void free_http_response(struct http_resp *resp);
+void free_http_request(struct http_req *req);
+void add_html_head(GString* content, const gchar* title);
+
+void add_problem_html(const problem_t *problem, GString *content);
+void add_problem_plain(const problem_t *problem, GString *content);
+
+gchar *http_get_type_text(content_type type);
 
 
 #endif
