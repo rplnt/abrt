@@ -1,9 +1,9 @@
 bin_PROGRAMS = abrt-http
 
 abrt_http_SOURCES = \
-    main.c \
-    abrtapi.h abrtapi.c \
-    http.h
+    abrtapi.c abrtapi.h \
+    abrtapi_api.h abrtapi_api.c \
+    abrtapi_http.h abrtapi_http.c
 abrt_http_CPPFLAGS = \
     -I$(srcdir)/../include/report -I$(srcdir)/../include \
     -I$(srcdir)/../lib \
