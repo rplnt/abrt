@@ -1,7 +1,16 @@
 #include "abrtapi.h"
 
 
-/* universal "serve" function */
+/**
+ * Serve request.
+ *
+ * Read from socket, parse http headers, respond. Each request
+ * is passed through this function.
+ *
+ * @param sock      Pointer to a socket.
+ * @param flags     Configuration flags (we need to know if SSL is on).
+ * @return          Positive integer if we want to keep connection alive.
+ */
 int serve(void* sock, int flags)
 {
     int rt, err, len=0;
@@ -109,6 +118,15 @@ int serve(void* sock, int flags)
     return rt;
 }
 
+
+
+/**
+ * Initialize network socket.
+ *
+ * @param address   Address that we'll try to listen on.
+ * @param port      Listening port.
+ * @return          Listening socket.
+ */
 int init_n_socket(char *address, char *port)
 {
     int sockfd;
@@ -140,6 +158,13 @@ int init_n_socket(char *address, char *port)
 }
 
 
+
+/**
+ * Initialize unix socket.
+ *
+ * @param sock_name Name of the socket.
+ * @return          Listening socket.
+ */
 int init_u_socket(char *sock_name)
 {
     int sockfd, len;
@@ -164,8 +189,16 @@ int init_u_socket(char *sock_name)
 }
 
 
-
-/* use only for opts parsing (as it exits) */
+/**
+ * Safer strcpy that dies on failure.
+ *
+ * Use only for address parsing.
+ *
+ * @param dest      Destination string.
+ * @param src       Source string.
+ * @param max_len   Maximum length of source.
+ * @return          Zero on success.
+ */
 bool safe_strcpy(char* dest, const char* src, int max_len)
 {
     if ( strlen(src) > max_len ) {
@@ -177,7 +210,18 @@ bool safe_strcpy(char* dest, const char* src, int max_len)
 }
 
 
-/* function assumes valid input. if it's not, getaddrinfo will fail */
+/**
+ * Parse address string.
+ *
+ * Parse and store input of an address. Either IPv4, IPv6 or filename.
+ * Network address can be with or without a port. Does not validate
+ * input as it relies on getaddrinfo/bind to fail.
+ *
+ * @param input     String to parse.
+ * @param addr      What we decided is address.
+ * @param port      What we decided is port.
+ * @return          Flags specifying what we parsed.
+ */
 int parse_addr_input(char* input, char* addr, char* port)
 {
     int rt=OPT_ADDR;
@@ -227,6 +271,15 @@ int parse_addr_input(char* input, char* addr, char* port)
     return rt;
 }
 
+
+
+/**
+ * Initialize ssl context.
+ *
+ * Initialize SSL-related stuff.
+ *
+ * @return          New SSL context.
+ */
 SSL_CTX* init_ssl_context(void)
 {
     const SSL_METHOD *method;
@@ -245,17 +298,28 @@ SSL_CTX* init_ssl_context(void)
 }
 
 
-/* TODO */
+/** TODO
+ * Print usage and exit
+ */
 void usage_and_exit()
 {
     error_msg_and_die("usage");
 }
 
+/**
+ * Child handlers that prevents creating zombies.
+ */
 void sigchld_handler(int sig)
 {
     waitpid(0, NULL, WNOHANG);
 }
 
+
+/**
+ * Main.
+ *
+ * Configure self, initialize server stuff and listen.
+ */
 int main(int argc, char **argv)
 {
     int flags=0; //config flags
@@ -443,17 +507,17 @@ int main(int argc, char **argv)
 
 
 
-/* helper that will clean the problems list */
-void free_list(problem_t *item)
-{
-    g_free(item->id);
-    g_free(item->reason);
-    g_free(item->time);
-    g_free(item);
-}
 
 
-/* remove CR from buffer in-place */
+
+/**
+ * Remove Carriage-Returns from buffer.
+ *
+ * Removes CR inplace.
+ *
+ * @param in        Input string.
+ * @return          True if last character was new line.
+ */
 bool delete_cr(gchar *in)
 {
     int index_l=0, index_r=0;
@@ -472,7 +536,13 @@ bool delete_cr(gchar *in)
 }
 
 
-/* modified version of rm_trailing_slashes in dump_dir.c */
+/**
+ * Remove trailing slash(es).
+ *
+ * "Stolen" from dump_dir.c.
+ *
+ * @param path      String to be "cleared".
+ */
 gchar *rm_slash(const gchar *path)
 {
     int len = strlen(path);

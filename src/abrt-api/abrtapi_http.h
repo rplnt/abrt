@@ -25,7 +25,7 @@ enum content_type {
 };
 typedef enum content_type content_type;
 
-
+/* http request structure */
 struct http_req {
     http_method method;
     gchar *uri;
@@ -34,6 +34,7 @@ struct http_req {
     GString *body;
 };
 
+/* http response structure */
 struct http_resp {
     int code;
     gchar *response_line;
@@ -49,7 +50,7 @@ struct http_resp {
 void parse_head(struct http_req* request, const GString* headers);
 
 /* validate request */
-int validate_request(const struct http_req *request);
+bool validate_request(const struct http_req* request);
 
 /* authentize user */
 bool http_authentize(const struct http_req *request);
@@ -68,10 +69,10 @@ struct http_resp* http_error(struct http_resp* resp, short error);
 void http_response(struct http_resp *resp, short code);
 
 /* get content type from request */
-int http_get_content_type(const struct http_req *request);
+content_type http_get_content_type(const struct http_req* request);
 
 /* get text for content type */
-gchar *http_get_content_type_text(content_type type);
+gchar *http_get_type_text(content_type type);
 
 /* free http structures */
 void free_http_response(struct http_resp *resp);

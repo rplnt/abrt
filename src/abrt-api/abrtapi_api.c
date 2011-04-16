@@ -7,7 +7,14 @@ void print_headers(const gchar *key, const gchar *value) {
 }
 
 
-
+/**
+ * Select route from url.
+ *
+ * First-level route. First part of the url is used to switch.
+ *
+ * @param url       A valid url.
+ * @return          Integer that can be used in switch statement.
+ */   
 int switch_route(const gchar *url)
 {
     gchar **significant;
@@ -42,8 +49,12 @@ int switch_route(const gchar *url)
 
 
 
-
-void api_entry_point(const struct  http_req *request, struct http_resp *response)
+/**
+ * "Print" out api entry point.
+ *
+ * @param response      Http response that we write our output to.
+ */
+void api_entry_point(struct http_resp *response)
 {
     gchar *type;
     GString *content;
@@ -52,7 +63,7 @@ void api_entry_point(const struct  http_req *request, struct http_resp *response
     xmlNodePtr node = NULL;
     int body_len;
 
-    type = http_get_content_type_text(response->format);
+    type = http_get_type_text(response->format);
 
     if ( response->format == XML ) {
         /* create xml response */
@@ -99,6 +110,13 @@ void api_entry_point(const struct  http_req *request, struct http_resp *response
 }
 
 
+
+/**
+ * Add html header to a string.
+ *
+ * @param content       String that we'll append our header to.
+ * @param title         Title used in header.
+ */
 void add_html_head(GString *content, const gchar *title)
 {
     g_string_append(content, "<html>\n <head>\n");
@@ -109,7 +127,16 @@ void add_html_head(GString *content, const gchar *title)
 }
 
 
-/* this function is called on request to /api/problems/... */
+
+/**
+ * API's problems route.
+ *
+ * This function is called on request to /problems. It either lists
+ * problems, print out detailed info or delete them. TODO
+ *
+ * @param request       Http request.
+ * @param response      Http response.
+ */
 void api_problems(const struct http_req* request, struct http_resp* response)
 {
     gchar **url;
@@ -123,7 +150,7 @@ void api_problems(const struct http_req* request, struct http_resp* response)
 
     gchar *content = NULL;
 
-    type = http_get_content_type_text(response->format);
+    type = http_get_type_text(response->format);
     options = g_strsplit(request->uri, "?", 2);
     path = rm_slash(options[0]);
     url = g_strsplit(path, "/", -1);
@@ -154,6 +181,7 @@ void api_problems(const struct http_req* request, struct http_resp* response)
         // serve binary data
         full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], url[3], NULL);
         ret = open(full_path, O_RDONLY);
+
         if ( ret == -1 ) {
             g_free(full_path);
             full_path = g_strjoin("/", home, ".abrt/spool" , url[2], NULL);
@@ -173,7 +201,6 @@ void api_problems(const struct http_req* request, struct http_resp* response)
         
     }
 
-
     /* if no error or download was set */
     if ( response->code == UNDECLARED ) {
         http_response(response, 200);
@@ -182,7 +209,6 @@ void api_problems(const struct http_req* request, struct http_resp* response)
         http_add_header(response, "Content-Length: %d", body_len);
         http_add_header(response, "Content-Type: %s", type);
     }
-
 
     g_free(type);
     g_free(path);
@@ -193,28 +219,7 @@ void api_problems(const struct http_req* request, struct http_resp* response)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* TODO delete this */
 gchar *set_static_css()
 {
     GString *content = g_string_sized_new(512);
@@ -227,6 +232,15 @@ gchar *set_static_css()
 
 
 
+/**
+ * Serve static files.
+ *
+ * Should be used to serve program-related static files.
+ * For example images, cascade styles, ...
+ *
+ * @param request       Http request.
+ * @param response      Http response.
+ */
 void api_serve_static(const struct http_req *req, struct http_resp *resp)
 {
         gchar **url;
@@ -254,7 +268,13 @@ void api_serve_static(const struct http_req *req, struct http_resp *resp)
 
 
 
-
+/**
+ * Get text version of content-type.
+ *
+ * @param type          Enum member.
+ * @return              Allocated string with textual representation
+ *                      of content type or NULL.
+ */
 gchar *http_get_type_text(content_type type)
 {
     gchar *c_type = NULL;
@@ -279,9 +299,13 @@ gchar *http_get_type_text(content_type type)
 
 
 
-
-/*
- * prepare ready-to-send response
+/**
+ * Generatr response to a request.
+ *
+ * Fill out all response fields so it can be served to client.
+ *
+ * @param request       Http request.
+ * @param response      Http response.
  */
 void generate_response(const struct http_req *request, struct http_resp *response)
 {
@@ -294,7 +318,7 @@ void generate_response(const struct http_req *request, struct http_resp *respons
     gchar *c_type;
 
     response->format = http_get_content_type(request);
-    c_type = http_get_content_type_text(response->format);
+    c_type = http_get_type_text(response->format);
 
     switch ( request->method ) {
         case UNDEFINED:
@@ -320,7 +344,7 @@ void generate_response(const struct http_req *request, struct http_resp *respons
     /* switch "first level" */
     switch ( switch_route(request->uri) ) {
         case 0: //root node
-            api_entry_point(request,response);
+            api_entry_point(response);
             break;
         case 1: //problems
             api_problems(request,response);
@@ -337,7 +361,14 @@ void generate_response(const struct http_req *request, struct http_resp *respons
 }
 
 
-/* will read whole dir and append all problems to XML tree */
+
+/**
+ * Generate string representing crash in given content-type.
+ *
+ * @param dir_name      Directory with the crash we want details from.
+ * @param format        Desired content type.
+ * @return              Newly allocated string or NULL on failure.
+ */
 gchar* fill_crash_details(const char* dir_name, const content_type format)
 {
     crash_data_t *crash_data;
@@ -404,12 +435,13 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
 
 
 
-
-
-
-
-
-
+/**
+ * Add crash detail in HTML to string.
+ *
+ * @param key           Name of the detail.
+ * @param item          Content and type of the crash detail.
+ * @param content       String we'll append detail to.
+ */
 void add_detail_html(const gchar* key, const crash_item* item, GString *content)
 {
     g_string_append(content,
@@ -432,7 +464,7 @@ void add_detail_html(const gchar* key, const crash_item* item, GString *content)
     gchar *id_start = g_strstr_len(content->str, -1, "<title>");
     gchar *id_stop = g_strstr_len(content->str, -1, "</title>");
     if ( id_start && id_stop ) {
-        gchar *id = g_strndup(id_start+7, (id_stop-id_start)-8);
+        gchar *id = g_strndup(id_start+7, (id_stop-id_start)-7);
         g_string_append_printf(content,
                            "<a href=/problems/%s/%s>%s</a>", id, key, key);
     } else {
@@ -456,7 +488,13 @@ void add_detail_html(const gchar* key, const crash_item* item, GString *content)
 
 
 
-
+/**
+ * Append XML node with a crash detail to a tree.
+ *
+ * @param key           Name of the detail.
+ * @param item          Content and type of the crash detail.
+ * @param root          Root node of an XML tree.
+ */
 void add_detail_xml(const gchar *key, const crash_item *item, xmlNodePtr root)
 {
     xmlNodePtr node = NULL;
@@ -504,7 +542,27 @@ void add_detail_xml(const gchar *key, const crash_item *item, xmlNodePtr root)
 }
 
 
-/* this will fill out XML tree for response to /problems/ */
+
+/**
+ * Add crash detail in plaintext to string.
+ *
+ * @param key           Name of the detail.
+ * @param item          Content and type of the crash detail.
+ * @param content       String we'll append detail to.
+ */
+void add_detail_plain(const gchar* key, const crash_item* item, GString* content)
+{
+    g_string_append_printf(content, "%s:\n %s\n\n", key, item->content);
+}
+
+
+
+/**
+ * Generate string representing all problems.
+ *
+ * @param format        Format we want the list in.
+ * @return              Allocated string.
+ */
 gchar* list_problems(content_type format)
 {
     char *home;
@@ -563,6 +621,12 @@ gchar* list_problems(content_type format)
 
 
 
+/**
+ * Append problem summary to a string in HTML.
+ *
+ * @param problem       Structure containing problem summary.
+ * @param content       String that we'll append info to.
+ */
 void add_problem_html(const problem_t *problem, GString *content)
 {
     g_string_append(content, "<div style=problem>\n");
@@ -577,6 +641,55 @@ void add_problem_html(const problem_t *problem, GString *content)
 
 
 
+/**
+ * Append problem summary to a XML tree.
+ *
+ * @param problem       Structure containing problem summary.
+ * @param root          Root node of a tree.
+ */
+void add_problem_xml(const problem_t *problem, xmlNodePtr root)
+{
+    char *href;
+    xmlNodePtr node = NULL;
+    xmlNodePtr text = NULL;
+    xmlNodePtr child = NULL;
+
+    href =  g_strjoin("/", "/problems", problem->id, NULL);
+
+    /* problem */
+    node = xmlNewNode(NULL, BAD_CAST "problem");
+    xmlNewProp(node, BAD_CAST "id", BAD_CAST problem->id);
+    xmlNewProp(node, BAD_CAST "href", BAD_CAST href);
+
+        /* time */
+        child = xmlNewNode(NULL, BAD_CAST "item");
+        xmlNewProp(child, BAD_CAST "name", BAD_CAST "time");
+        xmlNewProp(child, BAD_CAST "type", BAD_CAST "unixtime");
+        //xmlNewProp(child, BAD_CAST "format", BAD_CAST "%s");
+        text = xmlNewText(BAD_CAST problem->time);
+        xmlAddChild(child, text);
+        xmlAddChild(node, child);
+
+        /* reason */
+        child = xmlNewNode(NULL, BAD_CAST "item");
+        xmlNewProp(child, BAD_CAST "name", BAD_CAST "reason");
+        text = xmlNewText(BAD_CAST problem->reason);
+        xmlAddChild(child, text);
+        xmlAddChild(node, child);
+
+    xmlAddChild(root, node);
+
+    g_free(href);
+}
+
+
+
+/**
+ * Append problem summary to a string in plaintext.
+ *
+ * @param problem       Structure containing problem summary.
+ * @param content       String that we'll append info to.
+ */
 void add_problem_plain(const problem_t *problem, GString *content)
 {
     g_string_append_printf(content, "%s /problems/%s/\n %s\n\n",
@@ -584,7 +697,14 @@ void add_problem_plain(const problem_t *problem, GString *content)
 }
 
 
-/* add problems' summary from given direcotry to a list */
+
+/**
+ * Add problem's summary to a list.
+ *
+ * @param list          List we'll append problem to.
+ * @param dir_name      Direcotry from which we want problem details.
+ * @return              New start of the list.
+ */
 GList* create_list(GList *list, char* dir_name)
 {
     char *dump_dir_name;
@@ -641,43 +761,18 @@ GList* create_list(GList *list, char* dir_name)
 }
 
 
-/* this will add <problem> to an xml tree */
-void add_problem_xml(const problem_t *problem, xmlNodePtr root)
+
+/**
+ * Free problem_t structure.
+ *
+ * @param item      Structure to be free'd.
+ */
+void free_list(problem_t *item)
 {
-    char *href;
-    xmlNodePtr node = NULL;
-    xmlNodePtr text = NULL;
-    xmlNodePtr child = NULL;
-
-    href =  g_strjoin("/", "/problems", problem->id, NULL);
-
-    /* problem */
-    node = xmlNewNode(NULL, BAD_CAST "problem");
-    xmlNewProp(node, BAD_CAST "id", BAD_CAST problem->id);
-    xmlNewProp(node, BAD_CAST "href", BAD_CAST href);
-
-        /* time */
-        child = xmlNewNode(NULL, BAD_CAST "item");
-        xmlNewProp(child, BAD_CAST "name", BAD_CAST "time");
-        xmlNewProp(child, BAD_CAST "type", BAD_CAST "unixtime");
-        //xmlNewProp(child, BAD_CAST "format", BAD_CAST "%s");
-        text = xmlNewText(BAD_CAST problem->time);
-        xmlAddChild(child, text);
-        xmlAddChild(node, child);
-
-        /* reason */
-        child = xmlNewNode(NULL, BAD_CAST "item");
-        xmlNewProp(child, BAD_CAST "name", BAD_CAST "reason");
-        text = xmlNewText(BAD_CAST problem->reason);
-        xmlAddChild(child, text);
-        xmlAddChild(node, child);
-
-    xmlAddChild(root, node);
-
-    g_free(href);
+    g_free(item->id);
+    g_free(item->reason);
+    g_free(item->time);
+    g_free(item);
 }
-
-
-
 
 

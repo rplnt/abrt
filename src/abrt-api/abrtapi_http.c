@@ -1,7 +1,16 @@
 #include "abrtapi.h"
 
 
-
+/**
+ * Parse HTTP headers.
+ *
+ * Try to parse given http headers. We don't want to violate
+ * RFC but we also won't implement all of it. We'll discover
+ * http method, request url and header options.
+ *
+ * @param request       Request structure to which we'll fill details.
+ * @param headers       String containing whol http request's headers.
+ */
 void parse_head(struct http_req* request, const GString* headers)
 {
     int i,len;
@@ -129,8 +138,16 @@ stop:
 
 
 
-/* TODO */
-int validate_request(const struct http_req *request)
+/**
+ * Validate http request.
+ *
+ * Validate as much as possible. Url, headers, etc..
+ *
+ * @param request       HTTP request containing parsed header.
+ * @return              True on success.
+ *                      False in failure.
+ */
+bool validate_request(const struct http_req *request)
 {
     gchar **url;
 
@@ -148,7 +165,13 @@ int validate_request(const struct http_req *request)
 }
 
 
-/* authentize PAM and lower privileges */
+
+/**
+ * Authentize user using basic authentication and PAM.
+ *
+ * @param request       HTTP request that should contain login and password.
+ * @return              True on success and false on fialure.
+ */
 bool http_authentize(const struct http_req *request)
 {
     gchar *h = NULL;
@@ -166,9 +189,12 @@ bool http_authentize(const struct http_req *request)
 }
 
 
-/*
- * return text representation of code
- * used in: response line and error messages
+
+/**
+ * Return text representation if given http response code.
+ *
+ * @param code      Code value.
+ * @return          Allocated string containing textual representation of code.
  */
 gchar *http_get_code_text(short code)
 {
@@ -200,10 +226,14 @@ gchar *http_get_code_text(short code)
 
 
 
-/*
- * DO NOT add headers any other way
+/**
+ * Add http header to response structure.
  *
- * add given line to response's headers and terminate with CR-LF
+ * Will append string to options part of response.
+ *
+ * @param response          Response to add header option to.
+ * @param header_line       Header option to add. Can be formated.
+ * @return                  Same structure as given. For ease of use.
  */
 struct http_resp* http_add_header(struct http_resp* response, const gchar* header_line, ...)
 {
@@ -222,9 +252,44 @@ struct http_resp* http_add_header(struct http_resp* response, const gchar* heade
 }
 
 
-/*
- * fill out complete(?) response according to error
- * previous contents will be cleared
+
+/**
+ * Fill out http response line.
+ *
+ * Will fill out whole line also with textual representation:
+ * e.g. HTTP1/0 200 OK
+ *
+ * @param resp      Http response structure.
+ * @param code      Code used in line.
+ */
+void http_response(struct http_resp *resp, short code)
+{
+    gchar *code_text = NULL;
+
+    if ( resp->response_line != NULL ) {
+        g_free(resp->response_line);
+    }
+
+    resp->code = code;
+    code_text = http_get_code_text(code);
+
+    resp->response_line = g_strdup_printf("HTTP/1.1 %d %s\r\n", code, code_text);
+
+    g_free(code_text);
+
+}
+
+
+
+/**
+ * Generate response according to error.
+ *
+ * Structure will be cleared before use. Appropriate
+ * response line and header options are created. Body
+ * is filled out too.
+ *
+ * @param resp      Response structure to be populated with error.
+ * @param error     Http error code.
  */
 struct http_resp* http_error(struct http_resp* resp, short error)
 {
@@ -237,6 +302,7 @@ struct http_resp* http_error(struct http_resp* resp, short error)
 
     gchar *error_text;
     gchar *code_text;
+    gchar *type_text;
     GString *content;
     xmlDocPtr doc   = NULL;
     xmlNodePtr root = NULL;
@@ -249,6 +315,7 @@ struct http_resp* http_error(struct http_resp* resp, short error)
     http_response(resp, error);
     error_text = http_get_code_text(error);
     code_text = g_strdup_printf("%d", error);
+    type_text = http_get_type_text(resp->format);
 
     switch (resp->format) {
         case XML:
@@ -275,6 +342,7 @@ struct http_resp* http_error(struct http_resp* resp, short error)
 
     http_add_header(resp, "Content-Length: %d", body_len);
     http_add_header(resp, "Connection: close");
+    http_add_header(resp, "Content-Type: %s", type_text);
 
     /* additional error-specific headers */
     switch (error) {
@@ -289,45 +357,33 @@ struct http_resp* http_error(struct http_resp* resp, short error)
     xmlCleanupParser();
     g_free(error_text);
     g_free(code_text);
+    g_free(type_text);
 
     return resp;
 }
 
 
 
-/* fill out response line */
-void http_response(struct http_resp *resp, short code)
-{
-    gchar *code_text = NULL;
-
-    if ( resp->response_line != NULL ) {
-        g_free(resp->response_line);
-    }
-
-    resp->code = code;
-    code_text = http_get_code_text(code);
-
-    resp->response_line = g_strdup_printf("HTTP/1.0 %d %s\r\n", code, code_text);
-
-    g_free(code_text);
-
-}
-
-
-
-int http_get_content_type(const struct http_req *request)
+/**
+ * Get requested (or default) content type.
+ *
+ * Find request content type in headers or choose default.
+ *
+ * @param request       Request structure.
+ * @return              Content type choosed.
+ */
+enum content_type http_get_content_type(const struct http_req *request)
 {
     return HTML;
 }
 
 
-gchar *http_get_content_type_text(content_type type)
-{
-    return NULL;
-}
 
-
-/* free response's memory */
+/**
+ * Free memory used by HTTP response.
+ *
+ * @param resp      Http response structure.
+ */
 void free_http_response(struct http_resp *resp)
 {
     if ( resp->body ) {
@@ -346,7 +402,11 @@ void free_http_response(struct http_resp *resp)
 
 }
 
-/* free request's memory */
+/**
+ * Free memory used by HTTP request.
+ *
+ * @param resp      Http request structure.
+ */
 void free_http_request(struct http_req *req)
 {
     if ( req->uri ) {
