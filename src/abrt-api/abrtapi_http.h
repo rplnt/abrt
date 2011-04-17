@@ -69,7 +69,7 @@ struct http_resp* http_error(struct http_resp* resp, short error);
 void http_response(struct http_resp *resp, short code);
 
 /* get content type from request */
-content_type http_get_content_type(const struct http_req* request);
+int http_get_content_type(const struct http_req* request);
 
 /* get text for content type */
 gchar *http_get_type_text(content_type type);

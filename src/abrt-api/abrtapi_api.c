@@ -70,6 +70,7 @@ void api_entry_point(struct http_resp *response)
         doc = xmlNewDoc(BAD_CAST "1.0");
         root = xmlNewNode(NULL, BAD_CAST "api");
         xmlDocSetRootElement(doc, root);
+        xmlNewProp(root, BAD_CAST "name", BAD_CAST "abrt-http");
         xmlNewProp(root, BAD_CAST "version", BAD_CAST API_VERSION);
 
         node = xmlNewNode(NULL, BAD_CAST "link");
@@ -112,27 +113,6 @@ void api_entry_point(struct http_resp *response)
 
 
 /**
- * Add html header to a string.
- *
- * @param content       String that we'll append our header to.
- * @param title         Title used in header.
- */
-void add_html_head(GString *content, const gchar *title)
-{
-    g_string_append(content, "<html>\n<head>\n");
-    g_string_append_printf(content, "<title>%s</title>\n", title);
-    g_string_append(content,
-        "<link rel=\"stylesheet\" type=\"text/css\" href=\"/static/abrt.css\" />\n");
-    g_string_append(content, "</head>\n <body>\n");
-    g_string_append(content, "<a href=\"/\" style=a_home>ABRT API v 0.1");
-    g_string_append(content, "</a><br />\n");
-    g_string_append_printf(content,
-        "<div style=\"header\">%s</div>\n", title);
-}
-
-
-
-/**
  * API's problems route.
  *
  * This function is called on request to /problems. It either lists
@@ -159,12 +139,20 @@ void api_problems(const struct http_req* request, struct http_resp* response)
     path = rm_slash(options[0]);
     url = g_strsplit(path, "/", -1);
 
-    // we know that 0 = "" and 1 = "problems"
+    /*
+     * List problems.
+     */
     if ( g_strv_length(url) == 2 ) {
-        // list problems
-        content = list_problems(response->format);
-        //it's ok to serve empty list
-        
+        if ( request->method == GET || request->method == HEAD ) {
+            content = list_problems(response->format);
+        } else {
+            http_error(response, 405);
+            http_add_header(response, "Allow: GET, HEAD");
+        }
+
+    /*
+     * Print out details about selected problem.
+     */
     } else if ( g_strv_length(url) == 3 ) {
         // assume correct id in url[2]
         full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], NULL);
@@ -180,9 +168,12 @@ void api_problems(const struct http_req* request, struct http_resp* response)
         if ( !content ) {
             http_error(response, 404);
         }
-        
-    } else {
-        // serve binary data
+
+    /*
+     * Serve file.
+     */
+    } else if ( request->method == GET || request->method == HEAD ) {
+         
         full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], url[3], NULL);
         ret = open(full_path, O_RDONLY);
 
@@ -203,7 +194,12 @@ void api_problems(const struct http_req* request, struct http_resp* response)
             response->fd = ret;
         }
         
+    } else {
+        http_error(response, 405);
+        http_add_header(response, "Allow: GET, HEAD");
     }
+        
+    
 
     /* if no error or download was set */
     if ( response->code == UNDECLARED ) {
@@ -274,7 +270,7 @@ gchar *http_get_type_text(content_type type)
     
     switch (type) {
         case XML:
-            c_type = g_strdup("text/xml");
+            c_type = g_strdup("application/xml");
             break;
         case PLAIN:
             c_type = g_strdup("text/plain");
@@ -283,7 +279,7 @@ gchar *http_get_type_text(content_type type)
             c_type = g_strdup("text/html");
             break;
         case JSON:
-            c_type = g_strdup("text/json");
+            c_type = g_strdup("application/json");
             break;
     }
 
@@ -300,12 +296,14 @@ gchar *http_get_type_text(content_type type)
  * @param request       Http request.
  * @param response      Http response.
  */
-void generate_response(const struct http_req *request, struct http_resp *response)
+int generate_response(const struct http_req *request, struct http_resp *response)
 {
-    //FIXME
+    gchar *keep = NULL;
+    int rt=0;
+    
     if ( false && !http_authentize(request) ) {
         http_error(response, 401);
-        return;
+        return rt;
     }
 
     response->format = http_get_content_type(request);
@@ -319,22 +317,30 @@ void generate_response(const struct http_req *request, struct http_resp *respons
         case HEAD:
             break;
         case DELETE:
+            break;
         case POST:
         case PUT:
         case OPTIONS:
         case TRACE:
         case CONNECT:
             http_error(response, 501);
+            break;
     }
 
     if ( response->code != UNDECLARED ) {
-        return;
+        return rt;
     }
 
     /* switch "first level" */
     switch ( switch_route(request->uri) ) {
         case 0: //root node
+            if ( request->method == DELETE ) {
+                http_error(response, 405);
+                http_add_header(response, "Allow: GET, HEAD");
+                break;
+            }
             api_entry_point(response);
+            
             break;
         case 1: //problems
             api_problems(request,response);
@@ -348,6 +354,19 @@ void generate_response(const struct http_req *request, struct http_resp *respons
             break;
     }
 
+
+    /* keep-alive */
+    if ( request->header_options && response->code == 200 ) {
+        keep = g_hash_table_lookup(request->header_options, "connection");
+    }
+    if ( keep && g_strstr_len(keep, -1, "Keep-Alive") ) {
+        http_add_header(response,"Connection: Keep-Alive");
+        rt = 1;
+    } else {
+        rt = 0;
+    }
+
+    return rt;
 }
 
 
@@ -422,7 +441,6 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
             break;
     }
 
-    g_free(id);
     g_strfreev(parts);
     xmlFreeDoc(doc);
     xmlCleanupParser();
@@ -552,6 +570,27 @@ void add_detail_xml(const gchar *key, const crash_item *item, xmlNodePtr root)
 void add_detail_plain(const gchar* key, const crash_item* item, GString* content)
 {
     g_string_append_printf(content, "%s:\n %s\n\n", key, item->content);
+}
+
+
+
+/**
+ * Add html header to a string.
+ *
+ * @param content       String that we'll append our header to.
+ * @param title         Title used in header.
+ */
+void add_html_head(GString *content, const gchar *title)
+{
+    g_string_append(content, "<html>\n<head>\n");
+    g_string_append_printf(content, "<title>%s</title>\n", title);
+    /*g_string_append(content,
+        "<link rel=\"stylesheet\" type=\"text/css\" href=\"/static/style.css\" />\n");*/
+    g_string_append(content, "</head>\n <body>\n");
+    g_string_append(content, "<a href=\"/\" style=a_home>ABRT API v 0.1");
+    g_string_append(content, "</a><br />\n");
+    g_string_append_printf(content,
+        "<div style=\"header\">%s</div>\n", title);
 }
 
 

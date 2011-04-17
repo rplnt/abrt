@@ -7,7 +7,7 @@ typedef struct problem_summary  {
     gchar* reason;
 } problem_t;
 
-void generate_response(const struct http_req *request, struct http_resp *response);
+int generate_response(const struct http_req *request, struct http_resp *response);
 
 /* populate list of problems */
 void add_problem_xml(const problem_t* problem, xmlNodePtr root);
@@ -32,16 +32,5 @@ GList* create_list(GList *list, char* dir_name);
 void add_problem(problem_t* problem, xmlNodePtr root);
 void free_list(problem_t *item);
 int switch_route(const gchar *url);
-
-
-
-
-
-
-
-
-
-
-
 
 #endif

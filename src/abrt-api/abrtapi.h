@@ -41,6 +41,8 @@
 
 
 /* globals */
+#define STATIC_PATH "/etc/abrt/api/static"
+#define PREF_CONTENT_TYPE XML
 //TODO set from config
 //prefered content type, css, ..
 
@@ -59,7 +61,7 @@
 
 //TODO
 /* should be in makefile ? */
-#define CONFIG_PATH "api.conf" //path to config file
+#define CONFIG_PATH "/etc/abrt/api.conf" //path to config file
 #define BACKLOG (16) //maximum number of connection
 #define INPUT_LEN (128) //maximum length of url/path input
 #define PORT_LEN (16) //maximum length of port/service

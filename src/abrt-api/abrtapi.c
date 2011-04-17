@@ -73,19 +73,10 @@ int serve(void* sock, int flags)
     }
 
     //FIXME just a test
-    gchar *keep = NULL;
-    if (request.header_options != NULL ) {
-        keep = g_hash_table_lookup(request.header_options, "connection");
-    }
-    if ( keep != NULL ) {
-        http_add_header(&response,"Connection: Keep-Alive");
-        rt = 1;
-    } else {
-        rt = 0;
-    }
+
     //FIXME /just a test
 
-    generate_response(&request, &response);
+    rt = generate_response(&request, &response);
 
     /* write headers */
     if ( flags & OPT_SSL ) {

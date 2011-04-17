@@ -213,6 +213,9 @@ gchar *http_get_code_text(short code)
         case 404:
             name = g_strdup("Not Found");
             break;
+        case 405:
+            name = g_strdup("Method Not Allowed");
+            break;
         case 501:
             name = g_strdup("Not Implemented");
             break;
@@ -229,7 +232,8 @@ gchar *http_get_code_text(short code)
 /**
  * Add http header to response structure.
  *
- * Will append string to options part of response.
+ * Will append string to options part of response. Don't use \n
+ * as this function will add CR-LF at the end of the string.
  *
  * @param response          Response to add header option to.
  * @param header_line       Header option to add. Can be formated.
@@ -370,14 +374,46 @@ struct http_resp* http_error(struct http_resp* resp, short error)
 /**
  * Get requested (or default) content type.
  *
- * Find request content type in headers or choose default.
+ * Find request content type in headers or choose default. We
+ * ignore priority. Order matters.
  *
  * @param request       Request structure.
  * @return              Content type choosed.
  */
-enum content_type http_get_content_type(const struct http_req *request)
+int http_get_content_type(const struct http_req *request)
 {
-    return HTML;
+    gchar *values   = NULL;
+    gchar *min_pos  = NULL;
+    gchar *pos;
+    const gchar *types[] = {"application/xml", "text/plain",
+                            "text/html", "application/json", NULL};
+    short ret = PREF_CONTENT_TYPE;
+    int i;
+
+    if (request->header_options != NULL ) {
+        values = g_hash_table_lookup(request->header_options, "accept");
+    }
+
+    if (values) {
+        for (i=0;types[i]!=NULL;i++) {
+            pos = g_strstr_len(values, -1, types[i]);
+
+            if (!pos) {
+                continue;
+            }
+            if (!min_pos) {
+                min_pos = pos;
+                ret = i;
+                continue;
+            }
+            if ( pos < min_pos ) {
+                min_pos = pos;
+                ret = i;
+            }
+        }
+    }
+    
+    return ret;
 }
 
 
