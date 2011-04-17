@@ -119,11 +119,15 @@ void api_entry_point(struct http_resp *response)
  */
 void add_html_head(GString *content, const gchar *title)
 {
-    g_string_append(content, "<html>\n <head>\n");
-    g_string_append_printf(content, "  <title>%s</title>\n", title);
+    g_string_append(content, "<html>\n<head>\n");
+    g_string_append_printf(content, "<title>%s</title>\n", title);
     g_string_append(content,
-        "<link rel=\"stylesheet\" type=\"text/css\" href=\"/static/css\" />\n");
-    g_string_append(content, " </head>\n <body>\n");
+        "<link rel=\"stylesheet\" type=\"text/css\" href=\"/static/abrt.css\" />\n");
+    g_string_append(content, "</head>\n <body>\n");
+    g_string_append(content, "<a href=\"/\" style=a_home>ABRT API v 0.1");
+    g_string_append(content, "</a><br />\n");
+    g_string_append_printf(content,
+        "<div style=\"header\">%s</div>\n", title);
 }
 
 
@@ -219,19 +223,6 @@ void api_problems(const struct http_req* request, struct http_resp* response)
 
 
 
-/* TODO delete this */
-gchar *set_static_css()
-{
-    GString *content = g_string_sized_new(512);
-
-    g_string_append(content, "body { background-color: #101010; color: yellow; }\n");
-    g_string_append(content, "div { border: 1px solid red; }\n");
-
-    return g_string_free(content, false);
-}
-
-
-
 /**
  * Serve static files.
  *
@@ -243,27 +234,29 @@ gchar *set_static_css()
  */
 void api_serve_static(const struct http_req *req, struct http_resp *resp)
 {
-        gchar **url;
-        gchar *uri;
+    gchar **url;
+    gchar *uri;
 
-        uri = rm_slash(req->uri);
-        url = g_strsplit(uri, "/", 3);
+    uri = rm_slash(req->uri);
+    url = g_strsplit(uri, "/", 3);
 
-        if ( g_strv_length(url) < 3 ) {
-            http_error(resp, 404);
-            return;
-        }
+    if ( g_strv_length(url) < 3 ) {
+        http_error(resp, 404);
+        return;
+    }
 
-        if ( g_strcmp0(url[2], "css") == 0 ) {
-            resp->body = set_static_css();
-            http_response(resp, 200);
-            http_add_header(resp, "Cache-Control: max-age = 36000");
-            http_add_header(resp, "Content-Type: text/css");
-            http_add_header(resp, "Content-Length: %d", strlen(resp->body));
-        } else {
-            http_error(resp, 404);
-        }
-        
+    if ( false ) {
+        resp->body = strdup("body {background-color: #bbb;}");
+        http_response(resp, 200);
+        http_add_header(resp, "Cache-Control: max-age = 36000");
+        http_add_header(resp, "Content-Type: text/css");
+        http_add_header(resp, "Content-Length: %d", strlen(resp->body));
+    } else {
+        http_error(resp, 404);
+    }
+
+    g_strfreev(url);
+    g_free(uri);
 }
 
 
@@ -315,10 +308,7 @@ void generate_response(const struct http_req *request, struct http_resp *respons
         return;
     }
 
-    gchar *c_type;
-
     response->format = http_get_content_type(request);
-    c_type = http_get_type_text(response->format);
 
     switch ( request->method ) {
         case UNDEFINED:
@@ -374,7 +364,7 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
     crash_data_t *crash_data;
     xmlNodePtr root = NULL;
     xmlDocPtr doc = NULL;
-    gchar **parts;
+    gchar **parts = NULL;
     gchar *id;
 
     gchar *ret = NULL;
@@ -394,6 +384,7 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
         
         crash_data = create_crash_data_from_dump_dir(dd);
         dd_close(dd);
+        closedir(dir);
         
     } else {
         return NULL;
@@ -411,6 +402,7 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
             xmlDocSetRootElement(doc, root);
             xmlDocDumpFormatMemory(doc, (xmlChar**)&ret, NULL, 1);
             break;
+            
         case HTML:
             content = g_string_sized_new(2048);
             add_html_head(content, id);
@@ -418,11 +410,17 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
             g_string_append(content, " </body>\n</html>\n");
             ret = g_string_free(content, FALSE);
             break;
+            
         case JSON:
+            ret = g_strdup("Unsupported\n");
+            break;
+            
         case PLAIN:
+            content = g_string_sized_new(1024);
+            g_hash_table_foreach(crash_data, (GHFunc)add_detail_plain, content);
+            ret = g_string_free(content, FALSE);
             break;
     }
-
 
     g_free(id);
     g_strfreev(parts);
@@ -455,9 +453,9 @@ void add_detail_html(const gchar* key, const crash_item* item, GString *content)
     /* text */
     } else if ( item->flags & CD_FLAG_TXT ) {
     g_string_append_printf(content,
-                           "<span>%s</span><br/>", key);
+                           "<span style=\"txt_key\">%s</span><br/>", key);
     g_string_append_printf(content,
-                           "<span>%s</span>", item->content);
+                           "<span style=\"txt_content\">%s</span>", item->content);
     
     /* binary */
     } else if ( item->flags & CD_FLAG_BIN ) {
@@ -467,6 +465,7 @@ void add_detail_html(const gchar* key, const crash_item* item, GString *content)
         gchar *id = g_strndup(id_start+7, (id_stop-id_start)-7);
         g_string_append_printf(content,
                            "<a href=/problems/%s/%s>%s</a>", id, key, key);
+        g_free(id);
     } else {
         g_string_append_printf(content,
                            "<span>binary: %s</span>", key);
@@ -742,7 +741,7 @@ GList* create_list(GList *list, char* dir_name)
                     problem->reason = reason;
                     problem->time = time;
 
-                    list = g_list_prepend(list, problem);
+                    list = g_list_append(list, problem);
 
                     dd_close(dd);
                 }
@@ -774,5 +773,3 @@ void free_list(problem_t *item)
     g_free(item->time);
     g_free(item);
 }
-
-

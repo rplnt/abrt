@@ -309,9 +309,6 @@ struct http_resp* http_error(struct http_resp* resp, short error)
     xmlNodePtr text = NULL;
     int body_len;
 
-    doc = xmlNewDoc(BAD_CAST "1.0");
-    root = xmlNewNode(NULL, BAD_CAST "error");
-
     http_response(resp, error);
     error_text = http_get_code_text(error);
     code_text = g_strdup_printf("%d", error);
@@ -319,11 +316,17 @@ struct http_resp* http_error(struct http_resp* resp, short error)
 
     switch (resp->format) {
         case XML:
+            doc = xmlNewDoc(BAD_CAST "1.0");
+            root = xmlNewNode(NULL, BAD_CAST "error");
             xmlNewProp(root, BAD_CAST "code", BAD_CAST code_text);
             text = xmlNewText(BAD_CAST error_text);
             xmlAddChild(root, text);
             xmlDocSetRootElement(doc, root);
             xmlDocDumpFormatMemory(doc, (xmlChar**)&resp->body, &body_len, 1);
+            xmlFreeDoc(doc);
+            xmlCleanupParser();
+            break;
+            
         case HTML:
             content = g_string_sized_new(256);
             add_html_head(content, error_text);
@@ -333,8 +336,10 @@ struct http_resp* http_error(struct http_resp* resp, short error)
             resp->body = g_string_free(content, false);
             body_len = strlen(resp->body);
             break;
+            
         case JSON:
             break;
+            
         case PLAIN:
             resp->body = g_strdup_printf("Error %d: %s\n", error, error_text);
             break;
@@ -353,8 +358,6 @@ struct http_resp* http_error(struct http_resp* resp, short error)
             break;
     }
 
-    xmlFreeDoc(doc);
-    xmlCleanupParser();
     g_free(error_text);
     g_free(code_text);
     g_free(type_text);
@@ -398,6 +401,10 @@ void free_http_response(struct http_resp *resp)
     }
     if ( resp->response_line ) {
         g_free(resp->response_line);
+    }
+
+    if ( resp->fd > 0) {
+        close(resp->fd);
     }
 
 }
