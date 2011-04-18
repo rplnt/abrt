@@ -109,7 +109,7 @@ static void on_row_activated_cb(GtkTreeView *treeview, GtkTreePath *path, GtkTre
             if (pid == 0)
             {
                 /* Undo signal(SIGCHLD, SIG_IGN), or child inherits it and gets terribly confused */
-                signal(SIGCHLD, SIG_DFL);
+                /*signal(SIGCHLD, SIG_DFL); - not needed, we dont set it to SIG_IGN in main anymore */
 
                 const char *dirname= g_value_get_string(&d_dir);
                 VERB1 log("Executing: %s %s", "bug-reporting-wizard", dirname);
@@ -349,7 +349,7 @@ GtkWidget *create_main_window(void)
     g_main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_default_size(GTK_WINDOW(g_main_window), 700, 700);
     gtk_window_set_title(GTK_WINDOW(g_main_window), _("Automatic Bug Reporting Tool"));
-    gtk_window_set_icon_name(GTK_WINDOW(g_main_window), "abrt");
+    gtk_window_set_default_icon_name("abrt");
 
     GtkWidget *main_vbox = gtk_vbox_new(false, 0);
 

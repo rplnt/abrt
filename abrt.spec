@@ -21,7 +21,7 @@
 
 Summary: Automatic bug detection and reporting tool
 Name: abrt
-Version: 2.0.0
+Version: 2.0.1
 Release: %{?pkg_release}
 License: GPLv2+
 Group: Applications/System
@@ -334,6 +334,10 @@ fi
 %endif
 
 %post addon-ccpp
+# this is required for transition from 1.1.x to 2.x
+# because /cache/abrt-di/* was created under root with root:root
+# so 2.x fails when it tries to extract debuginfo there..
+chown -R abrt:abrt %{_localstatedir}/cache/abrt-di
 if [ $1 -eq 1 ]; then
 /sbin/chkconfig --add abrt-ccpp
 fi
@@ -438,6 +442,7 @@ fi
 %dir %{_sysconfdir}/%{name}
 %dir %{_sysconfdir}/%{name}/plugins
 %dir %{_sysconfdir}/%{name}/events.d
+%dir %{_sysconfdir}/%{name}/events
 #%dir %{_libdir}/%{name}
 %{_mandir}/man8/abrtd.8.gz
 %{_mandir}/man5/%{name}.conf.5.gz
@@ -500,7 +505,8 @@ fi
 %{_libexecdir}/abrt-hook-ccpp
 %{_bindir}/abrt-action-analyze-c
 %{_bindir}/abrt-action-trim-files
-%attr(2755, abrt, abrt) %{_bindir}/abrt-action-install-debuginfo
+%attr(4755, abrt, abrt) %{_bindir}/abrt-action-install-debuginfo
+%{_bindir}/abrt-action-analyzecore.py*
 %{_bindir}/abrt-action-install-debuginfo.py*
 %{_bindir}/abrt-action-generate-backtrace
 %{_bindir}/abrt-action-analyze-backtrace

@@ -2,20 +2,19 @@
 <interface>
   <requires lib="gtk+" version="2.16"/>
   <object class="GtkWindow" id="window0">
-    <property name="width_request">800</property>
-    <property name="height_request">500</property>
     <property name="can_focus">False</property>
     <child>
       <object class="GtkVBox" id="page_0">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="border_width">3</property>
+        <property name="spacing">3</property>
         <child>
           <object class="GtkLabel" id="lbl_cd_reason">
-            <property name="width_request">750</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="xalign">0</property>
-            <property name="ypad">5</property>
+            <property name="yalign">0</property>
             <property name="wrap">True</property>
             <attributes>
               <attribute name="style" value="normal"/>
@@ -50,6 +49,7 @@
             <child>
               <object class="GtkScrolledWindow" id="container_details1">
                 <property name="visible">True</property>
+                <property name="shadow_type">GTK_SHADOW_OUT</property>
                 <property name="can_focus">True</property>
                 <child>
                   <object class="GtkTreeView" id="tv_details">
@@ -77,8 +77,6 @@
     </child>
   </object>
   <object class="GtkWindow" id="window1">
-    <property name="width_request">800</property>
-    <property name="height_request">500</property>
     <property name="can_focus">False</property>
     <child>
       <object class="GtkVBox" id="page_1">
@@ -118,6 +116,7 @@
         <child>
           <object class="GtkScrolledWindow" id="scrolledwindow4">
             <property name="visible">True</property>
+            <property name="shadow_type">GTK_SHADOW_OUT</property>
             <property name="can_focus">True</property>
             <child>
               <object class="GtkTextView" id="tv_comment">
@@ -153,13 +152,9 @@
     </child>
   </object>
   <object class="GtkWindow" id="window2">
-    <property name="width_request">800</property>
-    <property name="height_request">500</property>
     <property name="can_focus">False</property>
     <child>
       <object class="GtkVBox" id="page_2">
-        <property name="width_request">750</property>
-        <property name="height_request">400</property>
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="border_width">10</property>
@@ -236,8 +231,6 @@
     </child>
   </object>
   <object class="GtkWindow" id="window3">
-    <property name="width_request">800</property>
-    <property name="height_request">500</property>
     <property name="can_focus">False</property>
     <child>
       <object class="GtkVBox" id="page_3">
@@ -246,7 +239,6 @@
         <property name="border_width">10</property>
         <child>
           <object class="GtkLabel" id="lbl_analyze_log">
-            <property name="width_request">750</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="xalign">0</property>
@@ -264,6 +256,7 @@
         <child>
           <object class="GtkScrolledWindow" id="scrolledwindow1">
             <property name="visible">True</property>
+            <property name="shadow_type">GTK_SHADOW_OUT</property>
             <property name="can_focus">True</property>
             <child>
               <object class="GtkTextView" id="tv_analyze_log">
@@ -284,8 +277,6 @@
     </child>
   </object>
   <object class="GtkWindow" id="window4">
-    <property name="width_request">800</property>
-    <property name="height_request">500</property>
     <property name="can_focus">False</property>
     <child>
       <object class="GtkVBox" id="page_4">
@@ -294,7 +285,6 @@
         <property name="border_width">10</property>
         <child>
           <object class="GtkLabel" id="lbl_page3">
-            <property name="width_request">750</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="xalign">0</property>
@@ -368,8 +358,6 @@
     </child>
   </object>
   <object class="GtkWindow" id="window5">
-    <property name="width_request">800</property>
-    <property name="height_request">500</property>
     <property name="can_focus">False</property>
     <property name="tooltip_text" translatable="yes">Use this button to generate more informative backtrace after you installed additional debug packages</property>
     <child>
@@ -379,7 +367,6 @@
         <property name="border_width">10</property>
         <child>
           <object class="GtkLabel" id="lbl_page4">
-            <property name="width_request">750</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="xalign">0</property>
@@ -397,6 +384,7 @@
         <child>
           <object class="GtkScrolledWindow" id="scrolledwindow2">
             <property name="visible">True</property>
+            <property name="shadow_type">GTK_SHADOW_OUT</property>
             <property name="can_focus">True</property>
             <child>
               <object class="GtkTextView" id="tv_backtrace">
@@ -569,8 +557,6 @@
     </child>
   </object>
   <object class="GtkWindow" id="window6">
-    <property name="width_request">800</property>
-    <property name="height_request">500</property>
     <property name="can_focus">False</property>
     <child>
       <object class="GtkVBox" id="page_6">
@@ -579,7 +565,6 @@
         <property name="border_width">10</property>
         <child>
           <object class="GtkLabel" id="lbl_page6">
-            <property name="width_request">750</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="xalign">0</property>
@@ -668,6 +653,7 @@
         <child>
           <object class="GtkScrolledWindow" id="container_details2">
             <property name="visible">True</property>
+            <property name="shadow_type">GTK_SHADOW_OUT</property>
             <property name="can_focus">True</property>
             <child>
               <placeholder/>
@@ -683,8 +669,6 @@
     </child>
   </object>
   <object class="GtkWindow" id="window7">
-    <property name="width_request">800</property>
-    <property name="height_request">500</property>
     <property name="can_focus">False</property>
     <child>
       <object class="GtkVBox" id="page_7">
@@ -693,7 +677,6 @@
         <property name="border_width">10</property>
         <child>
           <object class="GtkLabel" id="lbl_report_log">
-            <property name="width_request">750</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="xalign">0</property>
@@ -711,6 +694,7 @@
         <child>
           <object class="GtkScrolledWindow" id="scrolledwindow6">
             <property name="visible">True</property>
+            <property name="shadow_type">GTK_SHADOW_OUT</property>
             <property name="can_focus">True</property>
             <child>
               <object class="GtkTextView" id="tv_report_log">
