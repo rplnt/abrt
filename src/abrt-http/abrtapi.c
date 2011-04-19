@@ -79,8 +79,10 @@ int serve(void* sock, int flags)
     }
 
     //FIXME just a test
-    g_hash_table_foreach(request.header_options, (GHFunc)print_headers, NULL);
-    fflush(stderr);
+    if ( request.header_options ) {
+        //g_hash_table_foreach(request.header_options, (GHFunc)print_headers, NULL);
+        fflush(stderr);
+    }
     //FIXME /just a test
 
     rt = generate_response(&request, &response);
@@ -405,6 +407,7 @@ int main(int argc, char **argv)
         if ( !SSL_CTX_check_private_key(ctx) ) {
             error_msg_and_die("Private key does not match public key\n");
         }
+        (void)SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
     } else {
         ctx = NULL;
     }
@@ -454,7 +457,7 @@ int main(int argc, char **argv)
         if ( sockfd_in < 0 ) {
             //TODO handle errors appropriately - man 2 accept -> Error Handling
             // jump?
-            error_msg_and_die("Accept failed\n");
+            //error_msg_and_die("Accept failed\n");
         }
         
         //TODO log according to sock_in family?

@@ -152,10 +152,9 @@ void api_problems(const struct http_req* request, struct http_resp* response)
 //         if ( delete_dump_dir_possibly_using_abrtd(full_path) ) {
 //             http_error(response, 404);
 //         } else {
-//             response->body = g_strdup("deleted!");
-//             http_response(response, 200);
+//             response = g_strdup("deleted!");
 //         }
-        
+        content = g_strdup_printf("Problem %s deleted!\n", url[2]);
 
     /*
      * Print out details about selected problem.
@@ -313,12 +312,12 @@ int generate_response(const struct http_req *request, struct http_resp *response
     gchar *keep = NULL;
     int rt=0;
     
-    if ( false && !http_authentize(request) ) {
+    if ( !http_authentize(request) ) {
         http_error(response, 401);
         return rt;
     }
 
-    fprintf(stderr,"URL: %s\nMethod: %d\n\n",request->uri, request->method);
+    //fprintf(stderr,"URL: %s\nMethod: %d\n\n",request->uri, request->method);
     fflush(stderr);
 
     response->format = http_get_content_type(request);
@@ -384,8 +383,6 @@ int generate_response(const struct http_req *request, struct http_resp *response
     if ( keep && g_strstr_len(keep, -1, "Keep-Alive") ) {
         http_add_header(response,"Connection: Keep-Alive");
         rt = 1;
-    } else {
-        rt = 0;
     }
 
     return rt;
@@ -457,12 +454,8 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
             add_html_head(content, id);
             g_string_append(content, "<ul>\n");
             g_hash_table_foreach(crash_data, (GHFunc)add_detail_html, content);
-            g_string_append_printf(content,
-                    "<form class=\"del\" name=\"delete\"  action=\"%s\"", del_url);
             g_string_append(content,
-                    "method=\"delete\"><input type=\"submit\" value=\"Delete\" />");
-            g_string_append(content,
-                    "</form>");
+                    "<button name=\"Delete\" onclick=\"delProblem();\">Delete</button>");
             g_string_append(content, "</ul>\n");
             add_html_footer(content);
             ret = g_string_free(content, FALSE);
@@ -501,7 +494,7 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
 void add_detail_html(const gchar* key, const crash_item* item, GString *content)
 {
     g_string_append(content,
-                           "  <li class=\"problem\">\n");
+                           "  <li class=\"problem\">\n<div>");
 
     /* unixtime */
     if        ( item->flags & CD_FLAG_UNIXTIME )  {
@@ -542,7 +535,7 @@ void add_detail_html(const gchar* key, const crash_item* item, GString *content)
     }
 
     g_string_append(content,
-                           "  </li>");
+                           "</div></li>");
 }
 
 
@@ -628,6 +621,8 @@ void add_html_head(GString *content, const gchar *title)
     g_string_append_printf(content, "<title>%s</title>\n", title);
     g_string_append(content,
         "<link rel=\"stylesheet\" type=\"text/css\" href=\"/static/style.css\" />\n");
+    g_string_append(content,
+        "<script type=\"text/javascript\" src=\"/static/del.js\" />\n");
     g_string_append(content, "</head>\n<body><div class=\"main\">\n");
     g_string_append(content,
         "<h1><a href=\"/\" class=\"a_home\">ABRT HTTP v0.1</a></h1>\n");
@@ -724,14 +719,14 @@ gchar* list_problems(content_type format)
  */
 void add_problem_html(const problem_t *problem, GString *content)
 {
-    g_string_append(content, "<li>\n");
+    g_string_append(content, "<li><div>\n");
     g_string_append_printf(content,
                     "<a href=\"/problems/%s/\">%s</a>", problem->id, problem->id);
     g_string_append_printf(content,
                     "<span class=\"reason\">%s</span>", problem->reason);
     g_string_append_printf(content,
                     "<span class=\"time\">%s</span>", problem->time);
-    g_string_append(content, "</li>\n");
+    g_string_append(content, "<div></li>\n");
 }
 
 

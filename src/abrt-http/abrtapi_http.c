@@ -174,18 +174,52 @@ bool validate_request(const struct http_req *request)
  */
 bool http_authentize(const struct http_req *request)
 {
-    gchar *h = NULL;
+    gchar *h            = NULL;
+    gchar **auth_line   = NULL;
+    guchar *auth_data   = NULL;
+    gchar **auth        = NULL;
+    gsize len;
+    int i;
 
     if ( request->header_options != NULL ) {
-        g_hash_table_lookup(request->header_options, "authorization");
+        h = g_hash_table_lookup(request->header_options, "authorization");
+    } else {
+        return false;
     }
 
-    if (h) {
-        return true;
+    if (!h) {
+        return false;
     }
 
-    return false;
+    auth_line = g_strsplit(h, " ", -1);
 
+    if ( g_strv_length(auth_line) != 2 || g_ascii_strcasecmp(auth_line[0],"Basic") != 0 ) {
+        g_strfreev(auth_line);
+        return false;
+    }
+
+    auth_data = g_base64_decode(auth_line[1], &len);
+    g_strfreev(auth_line);
+    
+    for (i=0;i<len;i++) {
+        if ( !isprint(auth_data[i]) ) {
+            return false;
+        }
+    }
+
+    auth = g_strsplit((gchar*)auth_data, ":", 2);
+
+    if ( g_strv_length(auth) != 2) {
+        g_strfreev(auth);
+        return false;
+    }
+
+    fprintf(stderr, "login: %s\npassword: %s\n", auth[0], auth[1]);
+
+    g_free(auth_data);
+    g_strfreev(auth);
+    
+    return true;
 }
 
 
