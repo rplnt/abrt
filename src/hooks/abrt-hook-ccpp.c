@@ -308,7 +308,9 @@ int main(int argc, char** argv)
     {
         /* percent specifier:                %s    %c              %p  %u  %g  %t   %h       %e */
         /* argv:                 [0] [1]     [2]   [3]             [4] [5] [6] [7]  [8]      [9]         [10] */
-        error_msg_and_die("Usage: %s DUMPDIR SIGNO CORE_SIZE_LIMIT PID UID GID TIME HOSTNAME BINARY_NAME [OLD_PATTERN]", argv[0]);
+      // [OLD_PATTERN] is deprecated, so removing it from help:
+      //error_msg_and_die("Usage: %s DUMPDIR SIGNO CORE_SIZE_LIMIT PID UID GID TIME HOSTNAME BINARY_NAME [OLD_PATTERN]", argv[0]);
+        error_msg_and_die("Usage: %s DUMPDIR SIGNO CORE_SIZE_LIMIT PID UID GID TIME HOSTNAME BINARY_NAME", argv[0]);
     }
 
     /* Not needed on 2.6.30.
@@ -345,7 +347,20 @@ int main(int argc, char** argv)
     {
         perror_msg_and_die("pid '%s' or limit '%s' is bogus", argv[4], argv[3]);
     }
-    if (argv[10]) /* OLD_PATTERN */
+
+    FILE *saved_core_pattern = fopen(VAR_RUN"/abrt/saved_core_pattern", "r");
+    if (saved_core_pattern)
+    {
+        char *s = xmalloc_fgetline(saved_core_pattern);
+        fclose(saved_core_pattern);
+        /* If we have a saved pattern and it's not a "|PROG ARGS" thing... */
+        if (s && s[0] != '|')
+        {
+            core_basename = s;
+            argv[10] = NULL; /* don't use old way to pass OLD_PATTERN */
+        }
+    }
+    if (argv[10]) /* OLD_PATTERN (deprecated) */
     {
         char *buf = (char*) xzalloc(strlen(argv[10]) / 2 + 2);
         char *end = hex2bin(buf, argv[10], strlen(argv[10]));
@@ -499,27 +514,38 @@ int main(int argc, char** argv)
         dd_create_basic_files(dd, uid);
 
         char source_filename[sizeof("/proc/%lu/smaps") + sizeof(long)*3];
-        int base_name = sprintf(source_filename, "/proc/%lu/smaps", (long)pid);
-        base_name -= strlen("smaps");
+        int source_base_ofs = sprintf(source_filename, "/proc/%lu/smaps", (long)pid);
+        source_base_ofs -= strlen("smaps");
         char *dest_filename = concat_path_file(dd->dd_dirname, FILENAME_SMAPS);
-        copy_file(source_filename, dest_filename, 0640);
-        chown(dest_filename, dd->dd_uid, dd->dd_gid);
-        strcpy(source_filename + base_name, "maps");
-        strcpy(strrchr(dest_filename, '/') + 1, FILENAME_MAPS);
-        copy_file(source_filename, dest_filename, 0640);
-        chown(dest_filename, dd->dd_uid, dd->dd_gid);
-        free(dest_filename);
+        char *dest_base = strrchr(dest_filename, '/') + 1;
 
-        char *cmdline = get_cmdline(pid); /* never NULL */
-        char *reason = xasprintf("Process %s was killed by signal %s (SIG%s)",
-                                 executable, signal_str, signame ? signame : signal_str);
+        // Disabled for now: /proc/PID/smaps tends to be BIG,
+        // and not much more informative than /proc/PID/maps:
+        //copy_file(source_filename, dest_filename, 0640);
+        //chown(dest_filename, dd->dd_uid, dd->dd_gid);
+
+        strcpy(source_filename + source_base_ofs, "maps");
+        strcpy(dest_base, FILENAME_MAPS);
+        copy_file(source_filename, dest_filename, 0640);
+        chown(dest_filename, dd->dd_uid, dd->dd_gid);
+
+        free(dest_filename);
 
         dd_save_text(dd, FILENAME_ANALYZER, "CCpp");
         dd_save_text(dd, FILENAME_EXECUTABLE, executable);
-        dd_save_text(dd, FILENAME_CMDLINE, cmdline);
+
+        char *reason = xasprintf("Process %s was killed by signal %s (SIG%s)",
+                                 executable, signal_str, signame ? signame : signal_str);
         dd_save_text(dd, FILENAME_REASON, reason);
-        free(cmdline);
         free(reason);
+
+        char *cmdline = get_cmdline(pid);
+        dd_save_text(dd, FILENAME_CMDLINE, cmdline ? : "");
+        free(cmdline);
+
+        char *environ = get_environ(pid);
+        dd_save_text(dd, FILENAME_ENVIRON, environ ? : "");
+        free(environ);
 
         if (src_fd_binary > 0)
         {
