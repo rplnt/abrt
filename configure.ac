@@ -115,7 +115,7 @@ AC_CONFIG_FILES([
 	Makefile
 	abrt.pc
 	doc/Makefile
-	src/abrt-api/Makefile
+	src/abrt-http/Makefile
 	src/include/Makefile
 	src/lib/Makefile
 	src/report-python/Makefile

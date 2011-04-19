@@ -580,7 +580,7 @@ fi
 
 %files http
 %defattr(-,root,root,-)
-%{_bindir}/abrt-api
+%{_bindir}/abrt-http
 
 %files retrace-server
 %defattr(-,root,root,-)
