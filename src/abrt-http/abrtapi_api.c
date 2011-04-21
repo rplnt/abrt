@@ -148,12 +148,12 @@ void api_problems(const struct http_req* request, struct http_resp* response)
      */
     } else if ( g_strv_length(url) == 3 && request->method == DELETE ) {
         //TODO fatal error: dbus/dbus.h: No such file or directory
-//         full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], NULL);
-//         if ( delete_dump_dir_possibly_using_abrtd(full_path) ) {
-//             http_error(response, 404);
-//         } else {
-//             response = g_strdup("deleted!");
-//         }
+        full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], NULL);
+        if ( delete_dump_dir_possibly_using_abrtd(full_path) ) {
+            http_error(response, 404);
+        } else {
+            response->body = g_strdup("deleted!");
+        }
         content = g_strdup_printf("Problem %s deleted!\n", url[2]);
 
     /*

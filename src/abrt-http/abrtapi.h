@@ -35,7 +35,7 @@
 #include <libxml2/libxml/tree.h>
 #include <libxml/tree.h>
 
-//#include "abrt_dbus.h"
+#include "abrt_dbus.h"
 #include "abrtlib.h"
 #include "abrtapi_http.h"
 #include "abrtapi_api.h"

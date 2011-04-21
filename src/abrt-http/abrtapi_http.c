@@ -13,7 +13,7 @@
  */
 void parse_head(struct http_req* request, const GString* headers)
 {
-    int i,len;
+    int i; //len;
     gchar *uri          = NULL;
     gchar *version      = NULL;
     gchar *prev_key     = NULL;
@@ -27,10 +27,16 @@ void parse_head(struct http_req* request, const GString* headers)
                                 "PUT", "OPTIONS", "TRACE", "CONNECT", NULL
     };
 
+    if ( headers->str == NULL ) {
+        goto stop;
+    }
 
     /* split by new lines */
     s_head = g_strsplit(headers->str, "\n", -1);
-    len = g_strv_length(s_head);
+    //len = g_strv_length(s_head);
+    if ( g_strv_length(s_head) < 1 ) {
+        goto stop;
+    }
 
     /* request line */
     s_request = g_strsplit_set(s_head[0], " \t",3);
@@ -75,7 +81,7 @@ void parse_head(struct http_req* request, const GString* headers)
 
     i = 1;
     /* option headers */
-    while ( i < len ) {
+    while ( s_head[i] != NULL && s_head[i] != '\0' ) {
         gchar *value, *key, *new_value, **key_value;
 
         if ( s_head[i][0] == '\t' || s_head[i][0] == ' ' ) {
@@ -151,8 +157,15 @@ bool validate_request(const struct http_req *request)
 {
     gchar **url;
 
+    if ( request->method == UNDEFINED ) {
+        return false;
+    }
+
     //TODO Host: ??
     // no //
+    if ( request->uri == NULL ) {
+        return false;
+    }
 
     /*  one or zero '?' in url */
     url = g_strsplit(request->uri,"?",-1);
@@ -187,7 +200,7 @@ bool http_authentize(const struct http_req *request)
         return false;
     }
 
-    if (!h) {
+    if ( h == NULL ) {
         return false;
     }
 

@@ -9,6 +9,7 @@ abrt_http_CPPFLAGS = \
     -I$(srcdir)/../lib \
     $(LIBXML_CFLAGS) \
     $(GLIB_CFLAGS) \
+    $(DBUS_CFLAGS) \
     $(OPENSSL_CFLAGS) \
     -D_GNU_SOURCE \
     -Wall -Wwrite-strings -Werror \
@@ -16,14 +17,12 @@ abrt_http_CPPFLAGS = \
 #    $(GTK_CFLAGS)
 abrt_http_LDADD = \
     ../lib/libreport.la \
+    ../lib/libabrt_dbus.la \
     $(GLIB_LIBS) \
     $(LIBXML_LIBS) \
     $(OPENSSL_LIBS)
 
-#man_MANS = abrt-api.1
+#man_MANS = abrt-http.1
 #EXTRA_DIST = $(man_MANS)
-
-#completiondir = $(sysconfdir)/bash_completion.d
-#dist_completion_DATA = abrt-cli.bash
 
 DEFS = -DLOCALEDIR=\"$(localedir)\" @DEFS@
