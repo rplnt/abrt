@@ -152,7 +152,7 @@ void api_problems(const struct http_req* request, struct http_resp* response)
         if ( delete_dump_dir_possibly_using_abrtd(full_path) ) {
             http_error(response, 404);
         } else {
-            response->body = g_strdup("deleted!");
+            //response->body = g_strdup("deleted!");
         }
         content = g_strdup_printf("Problem %s deleted!\n", url[2]);
 

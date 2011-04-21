@@ -81,7 +81,7 @@ void parse_head(struct http_req* request, const GString* headers)
 
     i = 1;
     /* option headers */
-    while ( s_head[i] != NULL && s_head[i] != '\0' ) {
+    while ( s_head[i] != NULL && s_head[i][0] != '\n' && s_head[i][0] != '\0' ) {
         gchar *value, *key, *new_value, **key_value;
 
         if ( s_head[i][0] == '\t' || s_head[i][0] == ' ' ) {
