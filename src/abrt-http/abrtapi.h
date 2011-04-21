@@ -66,8 +66,7 @@
 #define BACKLOG (16) //maximum number of connection
 #define INPUT_LEN (128) //maximum length of url/path input
 #define PORT_LEN (16) //maximum length of port/service
-#define MAX_HEADER_SIZE (10*1024) //max header size
-#define READ_BUF (2560) //read from socket at once
+#define READ_BUF (2*1024) //read from socket at once == max header size
 
 /* should be in config file */
 #define CERT_FILE "/home/rplnt/projects/certs/cacert.pem"

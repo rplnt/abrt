@@ -31,7 +31,7 @@ struct http_req {
     gchar *uri;
     gchar *version;
     GHashTable *header_options;
-    GString *body;
+    void *body;
 };
 
 /* http response structure */
@@ -73,6 +73,9 @@ int http_get_content_type(const struct http_req* request);
 
 /* get text for content type */
 gchar *http_get_type_text(content_type type);
+
+/* check headers */
+int has_body(struct http_req *request);
 
 /* free http structures */
 void free_http_response(struct http_resp *resp);

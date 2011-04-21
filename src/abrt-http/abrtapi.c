@@ -18,14 +18,17 @@ void print_headers(gchar *key, gchar *value) {
  */
 int serve(void* sock, int flags)
 {
-    int rt, err, len=0;
-    bool clean; //clean cut - last read character was '\n'
-    bool head=FALSE;
+    int rt, i=0, err, len=0, c_len;
+    bool head = FALSE;
+    bool clean[2];
     gchar buffer[READ_BUF];
+    gchar *cut = NULL;
     GString *headers = g_string_sized_new(READ_BUF);
-    GString *body = NULL;
+    //GString *body = NULL;
     struct http_req request = { UNDEFINED, NULL, NULL, NULL, NULL };
     struct http_resp response = { 0, NULL, NULL, NULL, -1, 0 };
+
+    clean[1] = false;
 
     /* main "read" loop */
     while ( true ) {
@@ -36,54 +39,58 @@ int serve(void* sock, int flags)
             //TODO handle errno ||  SSL_get_error(ssl,err);
             break;
         }
-
         if ( err == 0 ) break;
-        buffer[err] = '\0';
-        clean = delete_cr(buffer);
-        g_string_append(head?body:headers, buffer);
-
+        
+        if (!head) {
+            buffer[err] = '\0';
+            clean[i%2] = delete_cr(buffer);
+            cut = g_strstr_len(buffer, -1, "\n\n");
+            if ( cut == NULL ) {
+                g_string_append(headers, buffer);
+            } else {
+                g_string_append_len(headers, buffer, cut-buffer);
+            }
+        }
+        
+        
         /* end of header section? */
-        if ( head == FALSE && (g_strstr_len(buffer, -1, "\n\n") != NULL ||
-                                        ( clean && buffer[0] == '\n' )) ) {
+        if ( !head && ( cut != NULL || (clean[(i+1)%2] && buffer[0]=='\n') ) ) {
             parse_head(&request, headers);
-            /* TODO
-             * check method (GET, UNDEFINED, ..etc.. doesn't have body)
-             * if method has body section
-             *   read content-len
-             *   allcate memory for body (or break)
-             * or break
-             */
-            body = g_string_sized_new(100); /* TEMP -- read above */
             head = TRUE;
-            break;
+            c_len = has_body(&request);
+
+            if ( c_len ) {
+                //TODO malloc body
+                // append rest of the (fixed) buffer at the beginning of a body
+                //if clean buffer[1];
+            } else {
+                break;
+            }
+            break; //because we don't support body yet
+            
+
         } else if ( head == TRUE ) {
             /* TODO
              * read body, check content-len
              * save body to request
              */
             break;
+            
         } else {
-            // count header size (make it nicer?)
+            // count header size
             len += err;
-            if ( len > MAX_HEADER_SIZE ) {
+            if ( len > READ_BUF-1 ) {
                 //TODO header is too long
                 break;
             }
         }
 
+        i++;
+
     }
 
+    
     g_string_free(headers, true); //because we allocated it
-    if ( head ) {
-        request.body = body; //save body
-    }
-
-    //FIXME just a test
-    if ( request.header_options ) {
-        //g_hash_table_foreach(request.header_options, (GHFunc)print_headers, NULL);
-        fflush(stderr);
-    }
-    //FIXME /just a test
 
     rt = generate_response(&request, &response);
 
@@ -316,6 +323,44 @@ void sigchld_handler(int sig)
 }
 
 
+void test() {
+    gchar *buff = (gchar*)"Hello\r\noption\noption2\n\nbody\r\nhell";
+    gchar *buffer = g_strdup(buff);
+    gchar *k;
+    int i = 0;
+    int p;
+    
+    while ( buffer[i] != '\0' ) {
+        printf("%d. %d = '%c'\n", i, (int)buffer[i], buffer[i]);
+        i++;
+    }
+    printf("\n-----\n");
+    
+    p = delete_cr(buffer);
+    
+
+    printf("\n-----\n");
+    printf("bstart: '%c' at %d", buffer[p], p);
+    printf("\n-----\n");
+    
+    i = 0;
+    while ( buffer[i] != '\0' ) {
+        printf("%d. %d = '%c'\n", i, (int)buffer[i], buffer[i]);
+        i++;
+    }
+
+    printf("\n");
+
+    k = g_strstr_len(buffer, -1, "\n\n");
+    printf("'%c'\n", (int)buffer[k-buffer]);
+
+    g_free(buffer);
+    
+    exit(1);
+    
+}
+
+
 /**
  * Main.
  *
@@ -323,6 +368,7 @@ void sigchld_handler(int sig)
  */
 int main(int argc, char **argv)
 {
+//     test();
     int flags=0; //config flags
     char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket
@@ -524,18 +570,35 @@ int main(int argc, char **argv)
 bool delete_cr(gchar *in)
 {
     int index_l=0, index_r=0;
+    bool ret = false;
+//     char last = '\0';
+//     bool cut = false;
 
     while ( in[index_r] != '\0' ) {
         if ( in[index_r] != '\r' ) {
             in[index_l] = in[index_r];
             index_l++;
         }
+//         if ( index_l > 0 && in[index_l-1] == '\n' && last == '\n' ) {
+//             printf("breaking\n");
+// TODO
+//             //we found \n\n early and don't want to ruin rest of the memory
+//             cut = true;
+//             break;
+//         }
+//         if ( index_l > 0) {
+//             last = in[index_l-1];
+//         }
         index_r++;
     }
 
     in[index_l] = '\0';
 
-    return in[index_l-1]=='\n';
+    if ( index_l > 0) {
+        ret = in[index_l-1] == '\n';
+    }
+
+    return ret;
 }
 
 

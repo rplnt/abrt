@@ -1,6 +1,8 @@
 #ifndef ABRTAPI_API_H
 #define ABRTAPI_API_H
 
+#define MAX_CLEN (32000) //max content length
+
 typedef struct problem_summary  {
     gchar* id;
     gchar* time;

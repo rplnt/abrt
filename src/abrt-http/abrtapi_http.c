@@ -30,7 +30,7 @@ void parse_head(struct http_req* request, const GString* headers)
 
     /* split by new lines */
     s_head = g_strsplit(headers->str, "\n", -1);
-    len = g_strv_length(s_head) - 2; // because of \n\n at the end
+    len = g_strv_length(s_head);
 
     /* request line */
     s_request = g_strsplit_set(s_head[0], " \t",3);
@@ -448,6 +448,29 @@ int http_get_content_type(const struct http_req *request)
     }
     
     return ret;
+}
+
+
+
+/**
+ * Return size of the http body or zero.
+ *
+ * @param request   Http request.
+ * @return          Zero or body_lenght, where 0<body_length<MAX_CLEN
+ */
+int has_body(struct http_req *request)
+{
+    int ret = 0;
+    gchar *c_len;
+
+    if ( request->header_options ) {
+        c_len = g_hash_table_lookup(request->header_options, "content-length");
+        if ( c_len && g_ascii_isdigit(c_len[0]) ) {
+            ret = atoi(c_len);
+        }
+    }
+    
+    return ret>MAX_CLEN?0:ret;
 }
 
 

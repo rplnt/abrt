@@ -311,6 +311,11 @@ int generate_response(const struct http_req *request, struct http_resp *response
 {
     gchar *keep = NULL;
     int rt=0;
+
+    if ( !validate_request(request) ) {
+        http_error(response, 400);
+        return rt;
+    }
     
     if ( !http_authentize(request) ) {
         http_error(response, 401);
