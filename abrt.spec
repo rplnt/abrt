@@ -29,6 +29,7 @@ URL: https://fedorahosted.org/abrt/
 Source: https://fedorahosted.org/released/%{name}/%{name}-%{version}.tar.gz
 Source1: abrt.init
 Source2: abrt-ccpp.init
+Source3: abrt-oops.init
 BuildRequires: dbus-devel
 BuildRequires: gtk2-devel
 BuildRequires: curl-devel
@@ -58,7 +59,7 @@ Requires: systemd-units
 %endif
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires: %{name}-libs = %{version}-%{release}
-Requires: libreport
+Requires: libreport = %{version}-%{release}
 Requires(pre): shadow-utils
 Obsoletes: abrt-plugin-sqlite3 > 0.0.1
 # required for transition from 1.1.13, can be removed after some time
@@ -290,6 +291,7 @@ find $RPM_BUILD_ROOT -name '*.la' -or -name '*.a' | xargs rm -f
 mkdir -p ${RPM_BUILD_ROOT}/%{_initrddir}
 install -m 755 %SOURCE1 ${RPM_BUILD_ROOT}/%{_initrddir}/abrtd
 install -m 755 %SOURCE2 ${RPM_BUILD_ROOT}/%{_initrddir}/abrt-ccpp
+install -m 755 %SOURCE3 ${RPM_BUILD_ROOT}/%{_initrddir}/abrt-oops
 mkdir -p $RPM_BUILD_ROOT/var/cache/abrt-di
 mkdir -p $RPM_BUILD_ROOT/var/run/abrt
 mkdir -p $RPM_BUILD_ROOT/var/spool/abrt
@@ -323,13 +325,13 @@ exit 0
 
 %post
 if [ $1 -eq 1 ]; then
-/sbin/chkconfig --add abrtd
+    /sbin/chkconfig --add abrtd
 fi
 #systemd
 %if %{?with_systemd}
 #if [ $1 -eq 1 ]; then
 # Enable (but don't start) the units by default
-  /bin/systemctl enable abrtd.service >/dev/null 2>&1 || :
+    /bin/systemctl enable abrtd.service >/dev/null 2>&1 || :
 #fi
 %endif
 
@@ -339,7 +341,13 @@ fi
 # so 2.x fails when it tries to extract debuginfo there..
 chown -R abrt:abrt %{_localstatedir}/cache/abrt-di
 if [ $1 -eq 1 ]; then
-/sbin/chkconfig --add abrt-ccpp
+    /sbin/chkconfig --add abrt-ccpp
+fi
+#systemd: TODO
+
+%post addon-kerneloops
+if [ $1 -eq 1 ]; then
+    /sbin/chkconfig --add abrt-oops
 fi
 #systemd: TODO
 
@@ -349,27 +357,46 @@ fi
 
 %preun
 if [ "$1" -eq "0" ] ; then
-  service abrtd stop >/dev/null 2>&1
-  /sbin/chkconfig --del abrtd
+    service abrtd stop >/dev/null 2>&1
+    /sbin/chkconfig --del abrtd
 fi
 #systemd
 %if %{?with_systemd}
 if [ "$1" -eq "0" ] ; then
-  /bin/systemctl stop abrtd.service >/dev/null 2>&1 || :
-  /bin/systemctl disable abrtd.service >/dev/null 2>&1 || :
+    /bin/systemctl stop abrtd.service >/dev/null 2>&1 || :
+    /bin/systemctl disable abrtd.service >/dev/null 2>&1 || :
 fi
 %endif
 
 %preun addon-ccpp
 if [ "$1" -eq "0" ] ; then
-  service abrt-ccpp stop >/dev/null 2>&1
-  /sbin/chkconfig --del abrt-ccpp
+    service abrt-ccpp stop >/dev/null 2>&1
+    /sbin/chkconfig --del abrt-ccpp
 fi
-#systemd: TODO
+#systemd (not tested):
+%if %{?with_systemd}
+if [ "$1" -eq "0" ] ; then
+    /bin/systemctl stop abrt-ccpp.service >/dev/null 2>&1 || :
+    /bin/systemctl disable abrt-ccpp.service >/dev/null 2>&1 || :
+fi
+%endif
+
+%preun addon-kerneloops
+if [ "$1" -eq "0" ] ; then
+    service abrt-oops stop >/dev/null 2>&1
+    /sbin/chkconfig --del abrt-oops
+fi
+#systemd (not tested):
+%if %{?with_systemd}
+if [ "$1" -eq "0" ] ; then
+    /bin/systemctl stop abrt-oops.service >/dev/null 2>&1 || :
+    /bin/systemctl disable abrt-oops.service >/dev/null 2>&1 || :
+fi
+%endif
 
 %preun retrace-server
 if [ "$1" = 0 ]; then
-  /sbin/install-info --delete %{_infodir}/abrt-retrace-server %{_infodir}/dir 2> /dev/null || :
+    /sbin/install-info --delete %{_infodir}/abrt-retrace-server %{_infodir}/dir 2> /dev/null || :
 fi
 
 %postun
@@ -377,7 +404,7 @@ fi
 %if %{?with_systemd}
 if [ $1 -ge 1 ] ; then
 # On upgrade, reload init system configuration if we changed unit files
-  /bin/systemctl daemon-reload >/dev/null 2>&1 || :
+    /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 fi
 %endif
 
@@ -385,7 +412,7 @@ fi
 # update icon cache
 touch --no-create %{_datadir}/icons/hicolor || :
 if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
+    %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
 fi
 
 %post libs -p /sbin/ldconfig
@@ -395,7 +422,7 @@ fi
 %postun gui
 touch --no-create %{_datadir}/icons/hicolor || :
 if [ -x %{_bindir}/gtk-update-icon-cache ]; then
-  %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
+    %{_bindir}/gtk-update-icon-cache --quiet %{_datadir}/icons/hicolor || :
 fi
 
 %posttrans
@@ -413,7 +440,23 @@ fi
 if [ "$1" -eq "0" ]; then
     service abrt-ccpp condrestart >/dev/null 2>&1 || :
 fi
-#systemd: TODO
+#systemd
+%if %{?with_systemd}
+if [ "$1" -eq "0" ]; then
+    /bin/systemctl try-restart abrt-ccpp.service >/dev/null 2>&1 || :
+fi
+%endif
+
+%posttrans addon-kerneloops
+if [ "$1" -eq "0" ]; then
+    service abrt-oops condrestart >/dev/null 2>&1 || :
+fi
+#systemd
+%if %{?with_systemd}
+if [ "$1" -eq "0" ]; then
+    /bin/systemctl try-restart abrt-oops.service >/dev/null 2>&1 || :
+fi
+%endif
 
 
 %files -f %{name}.lang
@@ -445,9 +488,10 @@ fi
 %dir %{_sysconfdir}/%{name}/events
 #%dir %{_libdir}/%{name}
 %{_mandir}/man8/abrtd.8.gz
-%{_mandir}/man5/%{name}.conf.5.gz
+%{_mandir}/man5/abrt.conf.5.gz
+%{_mandir}/man5/abrt_event.conf.5.gz
 # {_mandir}/man5/pyhook.conf.5.gz
-%{_mandir}/man7/%{name}-plugins.7.gz
+%{_mandir}/man7/abrt-plugins.7.gz
 %{_datadir}/dbus-1/system-services/com.redhat.abrt.service
 
 %files -n libreport
@@ -522,6 +566,7 @@ fi
 %config(noreplace) %{_sysconfdir}/%{name}/plugins/Kerneloops.conf
 %{_sysconfdir}/%{name}/events/report_Kerneloops.xml
 %config(noreplace) %{_sysconfdir}/%{name}/events.d/koops_events.conf
+%{_initrddir}/abrt-oops
 %{_mandir}/man7/abrt-KerneloopsReporter.7.gz
 %{_bindir}/abrt-dump-oops
 %{_bindir}/abrt-action-analyze-oops
@@ -566,7 +611,7 @@ fi
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/%{name}/plugins/Python.conf
 %{_bindir}/abrt-action-analyze-python
-%{python_site}/*.py*
+%{python_site}/abrt*.py*
 %{python_site}/abrt.pth
 
 %files cli
@@ -594,6 +639,7 @@ fi
 %{_bindir}/abrt-retrace-cleanup
 %{_bindir}/abrt-retrace-reposync
 %{_bindir}/coredump2packages
+%{python_site}/retrace.py*
 %{_datadir}/abrt-retrace/*.py*
 %{_datadir}/abrt-retrace/plugins/*.py*
 %{_datadir}/abrt-retrace/*.wsgi

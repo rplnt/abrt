@@ -21,21 +21,16 @@
 #endif
 #include <sys/un.h>
 #include <syslog.h>
-#include <pthread.h>
-#include <string>
 #include <sys/inotify.h>
 #include <sys/ioctl.h> /* ioctl(FIONREAD) */
+
 #include "abrtlib.h"
 #include "comm_layer_inner.h"
-#include "Settings.h"
 #include "CommLayerServerDBus.h"
 #include "MiddleWare.h"
 #include "parse_options.h"
 
 #define PROGNAME "abrtd"
-
-using namespace std;
-
 
 #define VAR_RUN_PIDFILE     VAR_RUN"/abrtd.pid"
 
@@ -52,28 +47,10 @@ using namespace std;
  * - signal: we got SIGTERM or SIGINT
  *
  * DBus methods we have:
- * - GetCrashInfos(): returns a vector_of_crash_data
- *      of crashes for given uid
- *      v[N]["executable"/"uid"/"kernel"/"backtrace"][N] = "contents"
- * - StartJob(crash_id,force): starts creating a report for /var/spool/abrt/DIR with this UID:UUID.
- *      Returns job id (uint64).
- *      After thread returns, when report creation thread has finished,
- *      JobDone() dbus signal is emitted.
- * - CreateReport(crash_id): returns crash data (hash table of struct crash_item)
- * - Report(crash_data[, map_map_string_t]):
- *      "Please report this crash": calls Report() of all registered reporter plugins.
- *      Returns report_status_t (map_vector_string_t) - the status of each call.
- *      2nd parameter is the contents of user's abrt.conf.
  * - DeleteDebugDump(crash_id): delete it from DB and delete corresponding /var/spool/abrt/DIR
- * - RegisterPlugin(PluginName): returns void
- * - UnRegisterPlugin(PluginName): returns void
- * - GetSettings(): returns map_abrt_settings_t (map_map_string_t)
- * - SetSettings(map_abrt_settings_t): returns void
  *
  * DBus signals we emit:
  * - Crash(progname, crash_id, dir, uid) - a new crash occurred (new /var/spool/abrt/DIR is found)
- * - JobDone(client_dbus_ID) - see StartJob above.
- *      Sent as unicast to the client which did StartJob.
  * - Warning(msg)
  * - Update(msg)
  *      Both are sent as unicast to last client set by set_client_name(name).
@@ -83,7 +60,6 @@ static volatile sig_atomic_t s_sig_caught;
 static int s_signal_pipe[2];
 static int s_signal_pipe_write = -1;
 static int s_upload_watch = -1;
-static pid_t log_scanner_pid = -1;
 static unsigned s_timeout;
 static bool s_exiting;
 
@@ -233,12 +209,12 @@ static void handle_signal(int signo)
     // Enable for debugging only, malloc/printf are unsafe in signal handlers
     //VERB3 log("Got signal %d", signo);
 
-    uint8_t l_sig_caught;
-    s_sig_caught = l_sig_caught = signo;
+    uint8_t sig_caught;
+    s_sig_caught = sig_caught = signo;
     /* Using local copy of s_sig_caught so that concurrent signal
      * won't change it under us */
     if (s_signal_pipe_write >= 0)
-        write(s_signal_pipe_write, &l_sig_caught, 1);
+        write(s_signal_pipe_write, &sig_caught, 1);
 
     errno = save_errno;
 }
@@ -246,7 +222,7 @@ static void handle_signal(int signo)
 /* Signal pipe handler */
 static gboolean handle_signal_cb(GIOChannel *gio, GIOCondition condition, gpointer ptr_unused)
 {
-    char signo;
+    uint8_t signo;
     gsize len = 0;
     g_io_channel_read(gio, &signo, 1, &len);
     if (len == 1)
@@ -260,12 +236,6 @@ static gboolean handle_signal_cb(GIOChannel *gio, GIOCondition condition, gpoint
             pid_t pid;
             while ((pid = waitpid(-1, NULL, WNOHANG)) > 0)
             {
-                if (pid == log_scanner_pid)
-                {
-                    log("log scanner exited");
-                    log_scanner_pid = -1;
-                    continue;
-                }
                 if (socket_client_count)
                     socket_client_count--;
                 if (!socket_channel_cb_id)
@@ -275,9 +245,8 @@ static gboolean handle_signal_cb(GIOChannel *gio, GIOCondition condition, gpoint
                 }
             }
         }
-        return TRUE;
     }
-    return FALSE;
+    return TRUE; /* "please don't remove this event" */
 }
 
 /* Inotify handler */
@@ -304,7 +273,7 @@ static gboolean handle_inotify_cb(GIOChannel *gio, GIOCondition condition, gpoin
     {
         perror_msg("Error reading inotify fd");
         free(buf);
-        return FALSE;
+        return FALSE; /* "remove this event" (huh??) */
     }
 
     /* Reconstruct each event and send message to the dbus */
@@ -418,7 +387,7 @@ static gboolean handle_inotify_cb(GIOChannel *gio, GIOCondition condition, gpoin
     } /* while */
 
     free(buf);
-    return TRUE;
+    return TRUE; /* "please don't remove this event" */
 }
 
 /* Run main loop with idle timeout.
@@ -426,6 +395,7 @@ static gboolean handle_inotify_cb(GIOChannel *gio, GIOCondition condition, gpoin
  */
 static void run_main_loop(GMainLoop* loop)
 {
+    time_t cur_time = time(NULL);
     GMainContext *context = g_main_loop_get_context(loop);
     int fds_size = 0;
     GPollFD *fds = NULL;
@@ -455,6 +425,14 @@ static void run_main_loop(GMainLoop* loop)
         g_poll(fds, nfds, timeout);
         if (s_timeout != 0)
             alarm(0);
+
+        time_t new_time = time(NULL);
+        if (cur_time != new_time)
+        {
+            cur_time = new_time;
+            load_abrt_conf();
+//TODO: react to changes in g_settings_sWatchCrashdumpArchiveDir
+        }
 
         some_ready = g_main_context_check(context, max_priority, fds, nfds);
         if (some_ready)
@@ -568,6 +546,8 @@ int main(int argc, char** argv)
     xpipe(s_signal_pipe);
     close_on_exec_on(s_signal_pipe[0]);
     close_on_exec_on(s_signal_pipe[1]);
+    ndelay_on(s_signal_pipe[0]); /* I/O should not block - */
+    ndelay_on(s_signal_pipe[1]); /* especially writes! they happen in signal handler! */
     signal(SIGTERM, handle_signal);
     signal(SIGINT,  handle_signal);
     signal(SIGCHLD, handle_signal);
@@ -616,81 +596,69 @@ int main(int argc, char** argv)
     bool pidfile_created = false;
 
     /* Initialization */
-    try
+    init_daemon_logging();
+
+    VERB1 log("Loading settings");
+    if (load_abrt_conf() != 0)
+        goto init_error;
+
+    sanitize_dump_dir_rights();
+
+    VERB1 log("Creating glib main loop");
+    pMainloop = g_main_loop_new(NULL, FALSE);
+
+    VERB1 log("Initializing inotify");
+    errno = 0;
+    int inotify_fd = inotify_init();
+    if (inotify_fd == -1)
+        perror_msg_and_die("inotify_init failed");
+    close_on_exec_on(inotify_fd);
+
+    /* Watching DEBUG_DUMPS_DIR for new files... */
+    if (inotify_add_watch(inotify_fd, DEBUG_DUMPS_DIR, IN_CREATE | IN_MOVED_TO) < 0)
     {
-        init_daemon_logging();
-
-        VERB1 log("Loading settings");
-        if (load_settings() != 0)
-            throw 1;
-
-        sanitize_dump_dir_rights();
-
-        VERB1 log("Creating glib main loop");
-        pMainloop = g_main_loop_new(NULL, FALSE);
-
-        VERB1 log("Initializing inotify");
-        errno = 0;
-        int inotify_fd = inotify_init();
-        if (inotify_fd == -1)
-            perror_msg_and_die("inotify_init failed");
-        close_on_exec_on(inotify_fd);
-
-        /* Watching DEBUG_DUMPS_DIR for new files... */
-        if (inotify_add_watch(inotify_fd, DEBUG_DUMPS_DIR, IN_CREATE | IN_MOVED_TO) < 0)
-        {
-            perror_msg("inotify_add_watch failed on '%s'", DEBUG_DUMPS_DIR);
-            throw 1;
-        }
-        if (g_settings_sWatchCrashdumpArchiveDir)
-        {
-            s_upload_watch = inotify_add_watch(inotify_fd, g_settings_sWatchCrashdumpArchiveDir, IN_CLOSE_WRITE|IN_MOVED_TO);
-            if (s_upload_watch < 0)
-            {
-                perror_msg("inotify_add_watch failed on '%s'", g_settings_sWatchCrashdumpArchiveDir);
-                throw 1;
-            }
-        }
-        VERB1 log("Adding inotify watch to glib main loop");
-        channel_inotify = g_io_channel_unix_new(inotify_fd);
-        channel_inotify_event_id = g_io_add_watch(channel_inotify,
-                                                  G_IO_IN,
-                                                  handle_inotify_cb,
-                                                  NULL);
-
-        /* Add an event source which waits for INT/TERM signal */
-        VERB1 log("Adding signal pipe watch to glib main loop");
-        channel_signal = g_io_channel_unix_new(s_signal_pipe[0]);
-        channel_signal_event_id = g_io_add_watch(channel_signal,
-                                                 G_IO_IN,
-                                                 handle_signal_cb,
-                                                 NULL);
-
-        /* Mark the territory */
-        VERB1 log("Creating pid file");
-        if (create_pidfile() != 0)
-            throw 1;
-        pidfile_created = true;
-
-        /* Open socket to receive new crashes. */
-        dumpsocket_init();
-
-        /* Note: this already may process a few dbus messages,
-         * therefore it should be the last thing to initialize.
-         */
-        VERB1 log("Initializing dbus");
-        if (init_dbus() != 0)
-            throw 1;
+        perror_msg("inotify_add_watch failed on '%s'", DEBUG_DUMPS_DIR);
+        goto init_error;
     }
-    catch (...)
+    if (g_settings_sWatchCrashdumpArchiveDir)
     {
-        /* Initialization error */
-        error_msg("Error while initializing daemon");
-        /* Inform parent that initialization failed */
-        if (!(opts & OPT_d))
-            kill(parent_pid, SIGINT);
-        goto cleanup;
+        s_upload_watch = inotify_add_watch(inotify_fd, g_settings_sWatchCrashdumpArchiveDir, IN_CLOSE_WRITE|IN_MOVED_TO);
+        if (s_upload_watch < 0)
+        {
+            perror_msg("inotify_add_watch failed on '%s'", g_settings_sWatchCrashdumpArchiveDir);
+            goto init_error;
+        }
     }
+    VERB1 log("Adding inotify watch to glib main loop");
+    channel_inotify = g_io_channel_unix_new(inotify_fd);
+    channel_inotify_event_id = g_io_add_watch(channel_inotify,
+                                              G_IO_IN,
+                                              handle_inotify_cb,
+                                              NULL);
+
+    /* Add an event source which waits for INT/TERM signal */
+    VERB1 log("Adding signal pipe watch to glib main loop");
+    channel_signal = g_io_channel_unix_new(s_signal_pipe[0]);
+    channel_signal_event_id = g_io_add_watch(channel_signal,
+                                             G_IO_IN,
+                                             handle_signal_cb,
+                                             NULL);
+
+    /* Mark the territory */
+    VERB1 log("Creating pid file");
+    if (create_pidfile() != 0)
+        goto init_error;
+    pidfile_created = true;
+
+    /* Open socket to receive new crashes. */
+    dumpsocket_init();
+
+    /* Note: this already may process a few dbus messages,
+     * therefore it should be the last thing to initialize.
+     */
+    VERB1 log("Initializing dbus");
+    if (init_dbus() != 0)
+        goto init_error;
 
     /* Inform parent that we initialized ok */
     if (!(opts & OPT_d))
@@ -703,22 +671,6 @@ int main(int argc, char** argv)
 
     /* Only now we want signal pipe to work */
     s_signal_pipe_write = s_signal_pipe[1];
-
-    if (g_settings_sLogScanners)
-    {
-        const char *scanner_argv[] = {
-            "/bin/sh", "-c",
-            g_settings_sLogScanners,
-            NULL
-        };
-        log_scanner_pid = fork_execv_on_steroids(EXECFLG_INPUT_NUL,
-                (char**)scanner_argv,
-                /*pipefds:*/ NULL,
-                /*env_vec:*/ NULL,
-                /*dir:*/ NULL,
-                /*uid:*/ 0);
-        VERB1 log("Started log scanner, pid:%d", (int)log_scanner_pid);
-    }
 
     /* Enter the event loop */
     log("Init complete, entering main loop");
@@ -746,13 +698,7 @@ int main(int argc, char** argv)
     if (pMainloop)
         g_main_loop_unref(pMainloop);
 
-    free_settings();
-
-    if (log_scanner_pid > 0)
-    {
-        VERB2 log("Sending SIGTERM to %d", log_scanner_pid);
-        kill(log_scanner_pid, SIGTERM);
-    }
+    free_abrt_conf_data();
 
     /* Exiting */
     if (s_sig_caught && s_sig_caught != SIGALRM && s_sig_caught != SIGCHLD)
@@ -762,4 +708,12 @@ int main(int argc, char** argv)
         raise(s_sig_caught);
     }
     error_msg_and_die("Exiting");
+
+ init_error:
+    /* Initialization error */
+    error_msg("Error while initializing daemon");
+    /* Inform parent that initialization failed */
+    if (!(opts & OPT_d))
+        kill(parent_pid, SIGINT);
+    goto cleanup;
 }

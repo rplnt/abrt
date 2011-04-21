@@ -18,7 +18,6 @@
 */
 #include <fnmatch.h>
 #include "abrtlib.h"
-#include "Settings.h"
 #include "rpm.h"
 #include "parse_options.h"
 
@@ -198,7 +197,7 @@ static int SavePackageDescriptionToDebugDump(const char *dump_dir_name)
 
         if (g_settings_bOpenGPGCheck && !remote)
         {
-            if (rpm_chk_fingerprint(package_short_name))
+            if (!rpm_chk_fingerprint(package_short_name))
             {
                 log("Package '%s' isn't signed with proper key", package_short_name);
                 goto ret; /* return 1 (failure) */
@@ -275,8 +274,8 @@ int main(int argc, char **argv)
         msg_prefix = PROGNAME;
 
     VERB1 log("Loading settings");
-    if (load_settings() != 0)
-        return 1; /* syntax error (logged already by load_settings) */
+    if (load_abrt_conf() != 0)
+        return 1; /* syntax error (logged already by load_abrt_conf) */
 
     VERB1 log("Initializing rpm library");
     rpm_init();

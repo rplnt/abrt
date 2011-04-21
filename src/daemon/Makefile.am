@@ -10,11 +10,10 @@ sbin_PROGRAMS = \
     abrt-server
 
 abrtd_SOURCES = \
-    MiddleWare.h MiddleWare.cpp \
-    CommLayerServerDBus.h CommLayerServerDBus.cpp \
-    Settings.h Settings.cpp \
-    comm_layer_inner.h comm_layer_inner.cpp \
-    Daemon.cpp
+    MiddleWare.h MiddleWare.c \
+    CommLayerServerDBus.h CommLayerServerDBus.c \
+    comm_layer_inner.h comm_layer_inner.c \
+    abrtd.c
 abrtd_CPPFLAGS = \
     -I$(srcdir)/../include/report -I$(srcdir)/../include \
     -I$(srcdir)/../lib \
@@ -31,7 +30,6 @@ abrtd_CPPFLAGS = \
     -D_GNU_SOURCE \
     -Wall -Wwrite-strings
 abrtd_LDADD = \
-    $(DL_LIBS) \
     $(DBUS_LIBS) \
     ../lib/libreport.la \
     ../lib/libabrt_dbus.la
@@ -76,7 +74,6 @@ abrt_handle_crashdump_LDADD = \
 
 abrt_action_save_package_data_SOURCES = \
     rpm.h rpm.c \
-    Settings.h Settings.cpp \
     abrt-action-save-package-data.c
 abrt_action_save_package_data_CPPFLAGS = \
     -I$(srcdir)/../include/report -I$(srcdir)/../include \
@@ -108,13 +105,16 @@ dist_daemonconf_DATA = \
 comredhatabrtservicedir = ${datadir}/dbus-1/system-services
 dist_comredhatabrtservice_DATA = com.redhat.abrt.service
 
-man_MANS = abrtd.8 abrt.conf.5
+man_MANS = \
+    abrtd.8 \
+    abrt.conf.5 \
+    abrt_event.conf.5
 
 EXTRA_DIST = $(man_MANS) abrt-handle-upload
 
 if HAVE_SYSTEMD
 dist_systemdsystemunit_DATA = \
-        abrtd.service
+    abrtd.service
 endif
 
 DEFS = -DLOCALEDIR=\"$(localedir)\" @DEFS@
