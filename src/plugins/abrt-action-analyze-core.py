@@ -1,0 +1,175 @@
+#!/usr/bin/python -u
+# -*- coding: utf-8 -*-
+# WARNING: python -u means unbuffered I/O. Without it the messages are
+# passed to the parent asynchronously which looks bad in clients.
+
+from subprocess import Popen, PIPE
+import sys
+import os
+import getopt
+
+GETTEXT_PROGNAME = "abrt"
+import locale
+import gettext
+
+_ = lambda x: gettext.lgettext(x)
+
+
+verbose = 0
+
+def log(s):
+    sys.stderr.write("%s\n" % s)
+
+def log1(message):
+    if verbose > 0:
+        log(message)
+
+def log2(message):
+    if verbose > 1:
+        log(message)
+
+def error_msg(s):
+    sys.stderr.write("%s\n" % s)
+
+def error_msg_and_die(s):
+    sys.stderr.write("%s\n" % s)
+    exit(1)
+
+def xopen(name, mode):
+    try:
+        r = open(name, mode)
+    except IOError, e:
+        error_msg_and_die("Can't open '%s': %s" % (name, e));
+    return r
+
+
+def init_gettext():
+    try:
+        locale.setlocale(locale.LC_ALL, "")
+    except locale.Error:
+        os.environ['LC_ALL'] = 'C'
+        locale.setlocale(locale.LC_ALL, "")
+    gettext.bind_textdomain_codeset(GETTEXT_PROGNAME, locale.nl_langinfo(locale.CODESET))
+    gettext.bindtextdomain(GETTEXT_PROGNAME, '/usr/share/locale')
+    gettext.textdomain(GETTEXT_PROGNAME)
+
+#eu_unstrip_OUT=`eu-unstrip "--core=$core" -n 2>eu_unstrip.ERR`
+def extract_info_from_core(coredump_name):
+    """
+    Extracts builds with filenames,
+    Returns a list of tuples (build_id, filename)
+    """
+    #OFFSET = 0
+    BUILD_ID = 1
+    LIBRARY = 2
+    #SEP = 3
+    EXECUTABLE = 4
+
+    log(_("Analyzing coredump '%s'") % coredump_name)
+    eu_unstrip_OUT = Popen(["eu-unstrip","--core=%s" % coredump_name, "-n"], stdout=PIPE, bufsize=-1).communicate()[0]
+    # parse eu_unstrip_OUT and return the list of build_ids
+
+    # eu_unstrip_OUT = (
+    # "0x7f42362ca000+0x204000 c4d35d993598a6242f7525d024b5ec3becf5b447@0x7f42362ca1a0 /usr/lib64/libcanberra-gtk.so.0 - libcanberra-gtk.so.0\n"
+    # "0x3afa400000+0x210000 607308f916c13c3ad9ee503008d31fa671ba73ce@0x3afa4001a0 /usr/lib64/libcanberra.so.0 - libcanberra.so.0\n"
+    # "0x3afa400000+0x210000 607308f916c13c3ad9ee503008d31fa671ba73ce@0x3afa4001a0 /usr/lib64/libcanberra.so.0 - libcanberra.so.0\n"
+    # "0x3bc7000000+0x208000 3be016bb723e85779a23e111a8ab1a520b209422@0x3bc70001a0 /usr/lib64/libvorbisfile.so.3 - libvorbisfile.so.3\n"
+    # "0x7f423609e000+0x22c000 87f9c7d9844f364c73aa2566d6cfc9c5fa36d35d@0x7f423609e1a0 /usr/lib64/libvorbis.so.0 - libvorbis.so.0\n"
+    # "0x7f4235e99000+0x205000 b5bc98c125a11b571cf4f2746268a6d3cfa95b68@0x7f4235e991a0 /usr/lib64/libogg.so.0 - libogg.so.0\n"
+    # "0x7f4235c8b000+0x20e000 f1ff6c8ee30dba27e90ef0c5b013df2833da2889@0x7f4235c8b1a0 /usr/lib64/libtdb.so.1 - libtdb.so.1\n"
+    # "0x3bc3000000+0x209000 8ef56f789fd914e8d0678eb0cdfda1bfebb00b40@0x3bc30001a0 /usr/lib64/libltdl.so.7 - libltdl.so.7\n"
+    # "0x7f4231b64000+0x22b000 3ca5b83798349f78b362b1ea51c8a4bc8114b8b1@0x7f4231b641a0 /usr/lib64/gio/modules/libgvfsdbus.so - libgvfsdbus.so\n"
+    # "0x7f423192a000+0x218000 ad024a01ad132737a8cfc7c95beb7c77733a652d@0x7f423192a1a0 /usr/lib64/libgvfscommon.so.0 - libgvfscommon.so.0\n"
+    # "0x7f423192a000+0x218000 ad024a01ad132737a8cfc7c95beb7c77733a652d@0x7f423192a1a0 /usr/lib64/libgvfscommon.so.0 - libgvfscommon.so.0\n"
+    # "0x3bb8e00000+0x20e000 d240ac5755184a95c783bb98a2d05530e0cf958a@0x3bb8e001a0 /lib64/libudev.so.0 - libudev.so.0\n"
+    # )
+    #print eu_unstrip_OUT
+    # we failed to get build ids from the core -> die
+    if not eu_unstrip_OUT:
+        error_msg_and_die("Can't get build ids from %s" % coredump_name)
+
+    lines = eu_unstrip_OUT.split('\n')
+    # using set ensures the unique values
+    build_ids = set()
+    libraries = set()
+    build_ids = set()
+
+    for line in lines:
+        b_ids_line = line.split()
+        if len(b_ids_line) > 2:
+            # [exe] -> the executable itself
+            # linux-vdso.so.1 -> Virtual Dynamic Shared Object
+            if b_ids_line[EXECUTABLE] not in ["linux-vdso.so.1"]:
+                build_id = b_ids_line[BUILD_ID].split('@')[0]
+                build_ids.add(build_id)
+                library = b_ids_line[LIBRARY]
+                libraries.add(library)
+                build_ids.add(build_id)
+            else:
+                log2("skipping line '%s'" % line)
+    log1("Found %i build_ids" % len(build_ids))
+    log1("Found %i libs" % len(libraries))
+    return build_ids
+
+def build_ids_to_path(build_ids):
+    """
+    build_id1=${build_id:0:2}
+    build_id2=${build_id:2}
+    file="usr/lib/debug/.build-id/$build_id1/$build_id2.debug"
+    """
+    return ["/usr/lib/debug/.build-id/%s/%s.debug" % (b_id[:2], b_id[2:]) for b_id in build_ids]
+
+if __name__ == "__main__":
+    # localization
+    init_gettext()
+
+    ABRT_VERBOSE = os.getenv("ABRT_VERBOSE")
+    if (ABRT_VERBOSE):
+        try:
+            verbose = int(ABRT_VERBOSE)
+        except:
+            pass
+
+    progname = os.path.basename(sys.argv[0])
+    help_text = _("Usage: %s [-v] [-o OUTFILE] -c COREFILE") % progname
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "vhc:o:", ["help", "core="])
+    except getopt.GetoptError, err:
+        error_msg(err) # prints something like "option -a not recognized"
+        error_msg_and_die(help_text)
+
+    core = None
+    opt_o = None
+
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            print help_text
+            exit(0)
+        elif opt == "-v":
+            verbose += 1
+        elif opt == "-o":
+            opt_o = arg
+        elif opt in ("-c", "--core"):
+            core = arg
+
+    if not core:
+        error_msg(_("COREFILE is not specified"))
+        error_msg_and_die(help_text)
+
+    b_ids = extract_info_from_core(core)
+
+    try:
+        # Note that we open -o FILE only when we reach the point
+        # when we are definitely going to write something to it
+        outfile = sys.stdout
+        outname = opt_o
+        for bid in b_ids:
+            if outname:
+                outfile = xopen(outname, "w")
+                outname = None
+            outfile.write("%s\n" % bid)
+        outfile.close()
+    except IOError, e:
+        if not opt_o:
+            opt_o = "<stdout>"
+        error_msg_and_die("Error writing to '%s': %s" % (opt_o, e))

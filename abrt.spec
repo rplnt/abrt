@@ -21,7 +21,7 @@
 
 Summary: Automatic bug detection and reporting tool
 Name: abrt
-Version: 2.0.1
+Version: 2.0.2
 Release: %{?pkg_release}
 License: GPLv2+
 Group: Applications/System
@@ -548,9 +548,9 @@ fi
 %{_initrddir}/abrt-ccpp
 %{_libexecdir}/abrt-hook-ccpp
 %{_bindir}/abrt-action-analyze-c
-%{_bindir}/abrt-action-trim-files
+%attr(4755, abrt, abrt) %{_bindir}/abrt-action-trim-files
 %attr(4755, abrt, abrt) %{_bindir}/abrt-action-install-debuginfo
-%{_bindir}/abrt-action-analyzecore.py*
+%{_bindir}/abrt-action-analyze-core.py*
 %{_bindir}/abrt-action-install-debuginfo.py*
 %{_bindir}/abrt-action-generate-backtrace
 %{_bindir}/abrt-action-analyze-backtrace

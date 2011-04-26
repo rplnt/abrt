@@ -163,9 +163,19 @@ class DebugInfoDownload(YumBase):
         mute_stdout()
         #self.conf.cache = os.geteuid() != 0
         # Setup yum (Ts, RPM db, Repo & Sack)
-        self.doConfigSetup()
+        try:
+            # Saw this exception here:
+            # cannot open Packages index using db3 - Permission denied (13)
+            # yum.Errors.YumBaseError: Error: rpmdb open failed
+            self.doConfigSetup()
+        except Exception, e:
+            unmute_stdout()
+            print _("Error initializing yum (YumBase.doConfigSetup): '%s'") % str(e)
+            #return 1 - can't do this in constructor
+            exit(1)
         unmute_stdout()
 
+    # return value will be used as exitcode. So 0 = ok, !0 - error
     def download(self, files):
         """ @files - """
         installed_size = 0
@@ -183,7 +193,7 @@ class DebugInfoDownload(YumBase):
         # make yumdownloader work as non root user
         if not self.setCacheDir():
             self.logger.error("Error: can't make cachedir, exiting")
-            sys.exit(50)
+            exit(50)
 
         # disable all not needed
         for repo in self.repos.listEnabled():
@@ -204,8 +214,21 @@ class DebugInfoDownload(YumBase):
         # which takes time (sometimes minutes), let user know why
         # we have "paused":
         print _("Looking for needed packages in repositories")
-        self.repos.populateSack(mdtype='metadata', cacheonly=1)
-        self.repos.populateSack(mdtype='filelists', cacheonly=1)
+        try:
+            self.repos.populateSack(mdtype='metadata', cacheonly=1)
+        except Exception, e:
+            print _("Error retrieving metadata: '%s'") % str(e)
+            return 1
+        try:
+            # Saw this exception here:
+            # raise Errors.NoMoreMirrorsRepoError, errstr
+            # NoMoreMirrorsRepoError: failure:
+            # repodata/7e6632b82c91a2e88a66ad848e231f14c48259cbf3a1c3e992a77b1fc0e9d2f6-filelists.sqlite.bz2
+            # from fedora-debuginfo: [Errno 256] No more mirrors to try.
+            self.repos.populateSack(mdtype='filelists', cacheonly=1)
+        except Exception, e:
+            print _("Error retrieving filelists: '%s'") % str(e)
+            return 1
 
         #if verbose == 0:
         #    # re-enable the output to stdout
@@ -288,7 +311,7 @@ class DebugInfoDownload(YumBase):
             try:
                 os.rmdir(self.tmpdir)
             except OSError:
-                print _("Can't remove %s, probably contains an error log" % self.tmpdir)
+                print _("Can't remove %s, probably contains an error log") % self.tmpdir
 
 verbose = 0
 def log1(message):
@@ -351,7 +374,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, sigterm_handler)
     # ctrl-c
     signal.signal(signal.SIGINT, sigint_handler)
-    core = "build_ids"
+    fbuild_ids = "build_ids"
     cachedir = None
     tmpdir = None
     keeprpms = False
@@ -368,38 +391,33 @@ if __name__ == "__main__":
         except:
             pass
 
-    help_text = _("Usage: %s --core=COREFILE "
-                            "--tmpdir=TMPDIR "
-                            "--cache=CACHEDIR") % sys.argv[0]
+    progname = os.path.basename(sys.argv[0])
+    help_text = _("Usage: %s [-i <build_ids_file>] [--tmpdir=TMPDIR] "
+                            "[--cache=CACHEDIR] [--keeprpms]") % progname
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "vyhc:", ["help", "core=",
-                                                          "cache=", "tmpdir=",
-                                                          "keeprpms"])
+        opts, args = getopt.getopt(sys.argv[1:], "vyhi:", ["help", "cache=",
+                                                           "tmpdir=","keeprpms"])
     except getopt.GetoptError, err:
         print str(err) # prints something like "option -a not recognized"
-        sys.exit(RETURN_FAILURE)
+        exit(RETURN_FAILURE)
 
     for opt, arg in opts:
-        if opt == "-v":
+        if opt in ("-h", "--help"):
+            print help_text
+            exit(0)
+        elif opt == "-v":
             verbose += 1
         elif opt == "-y":
             noninteractive = True
-        elif opt in ("-i"):
-            core = arg
+        elif opt == "-i":
+            fbuild_ids = arg
         elif opt in ("--cache"):
             cachedir = arg
         elif opt in ("--tmpdir"):
             tmpdir = arg
         elif opt in ("--keeprpms"):
             keeprpms = True
-        elif opt in ("-h", "--help"):
-            print help_text
-            sys.exit()
 
-    if not core:
-        print _("You have to specify the path to coredump.")
-        print help_text
-        exit(RETURN_FAILURE)
     if not cachedir:
         cachedir = "/var/cache/abrt-di"
     if not tmpdir:
@@ -407,7 +425,11 @@ if __name__ == "__main__":
         # for now, we use /tmp...
         tmpdir = "/tmp/abrt-tmp-debuginfo-%s.%u" % (time.strftime("%Y-%m-%d-%H:%M:%S"), os.getpid())
 
-    fin = open(core)
+    try:
+        fin = open(fbuild_ids, "r")
+    except IOError, ex:
+        print _("Can't open %s: %s" % (fbuild_ids, ex))
+        exit(RETURN_FAILURE)
     for line in fin.readlines():
         b_ids.append(line.strip('\n'))
 
