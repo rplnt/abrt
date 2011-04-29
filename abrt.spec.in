@@ -616,6 +616,7 @@ fi
 %files http
 %defattr(-,root,root,-)
 %{_bindir}/abrt-http
+%{_sysconfdir}/pam.d/abrt-http
 
 %files retrace-server
 %defattr(-,root,root,-)

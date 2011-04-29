@@ -24,6 +24,9 @@ abrt_http_LDADD = \
     $(LIBXML_LIBS) \
     $(OPENSSL_LIBS)
 
+pamconfdir = ${sysconfdir}/pam.d/
+dist_pamconf_DATA = pam/abrt-http
+
 #man_MANS = abrt-http.1
 #EXTRA_DIST = $(man_MANS)
 
