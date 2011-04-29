@@ -27,6 +27,8 @@ void parse_head(struct http_req* request, const GString* headers)
                                 "PUT", "OPTIONS", "TRACE", "CONNECT", NULL
     };
 
+    fprintf(stderr, "%s\n\n", headers->str);
+
     if ( headers->str == NULL ) {
         goto stop;
     }
@@ -191,8 +193,10 @@ bool http_authentize(const struct http_req *request)
     gchar **auth_line   = NULL;
     guchar *auth_data   = NULL;
     gchar **auth        = NULL;
+    struct passwd *pw;
     gsize len;
     int i;
+    
 
     if ( request->header_options != NULL ) {
         h = g_hash_table_lookup(request->header_options, "authorization");
@@ -227,10 +231,16 @@ bool http_authentize(const struct http_req *request)
         return false;
     }
 
-    fprintf(stderr, "login: %s\npassword: %s\n", auth[0], auth[1]);
+    pw = basic_auth_pam(auth[0], auth[1]);
 
     g_free(auth_data);
     g_strfreev(auth);
+
+    if ( pw == NULL ) {
+        return false;
+    }
+
+    //drop privileges
     
     return true;
 }

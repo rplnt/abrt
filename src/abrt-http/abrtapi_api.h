@@ -17,9 +17,9 @@ void add_problem_html(const problem_t *problem, GString *content);
 void add_problem_plain(const problem_t *problem, GString *content);
 
 /* add detail of a problem */
-void add_detail_html(const gchar* key, const crash_item* item, GString* content);
-void add_detail_plain(const gchar* key, const crash_item* item, GString* content);
-void add_detail_xml(const gchar* key, const crash_item* item, xmlNodePtr root);
+void add_detail_html(const gchar* key, const struct problem_item* item, GString* content);
+void add_detail_plain(const gchar* key, const struct problem_item* item, GString* content);
+void add_detail_xml(const gchar* key, const struct problem_item* item, xmlNodePtr root);
 
 /* main api functions */
 void api_entry_point(struct http_resp* response);

@@ -3,7 +3,8 @@ bin_PROGRAMS = abrt-http
 abrt_http_SOURCES = \
     abrtapi.c abrtapi.h \
     abrtapi_api.h abrtapi_api.c \
-    abrtapi_http.h abrtapi_http.c
+    abrtapi_http.h abrtapi_http.c \
+    abrtapi_pam.c
 abrt_http_CPPFLAGS = \
     -I$(srcdir)/../include/report -I$(srcdir)/../include \
     -I$(srcdir)/../lib \
@@ -18,6 +19,7 @@ abrt_http_CPPFLAGS = \
 abrt_http_LDADD = \
     ../lib/libreport.la \
     ../lib/libabrt_dbus.la \
+    -lpam -lpam_misc \
     $(GLIB_LIBS) \
     $(LIBXML_LIBS) \
     $(OPENSSL_LIBS)

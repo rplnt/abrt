@@ -147,14 +147,14 @@ void api_problems(const struct http_req* request, struct http_resp* response)
      * Delete problem.
      */
     } else if ( g_strv_length(url) == 3 && request->method == DELETE ) {
-        //TODO fatal error: dbus/dbus.h: No such file or directory
         full_path = g_strjoin("/", DEBUG_DUMPS_DIR, url[2], NULL);
         if ( delete_dump_dir_possibly_using_abrtd(full_path) ) {
             http_error(response, 404);
         } else {
-            //response->body = g_strdup("deleted!");
+            //FIXME according to Content-Type
+            content = g_strdup_printf("Problem %s deleted!\n", url[2]);
         }
-        content = g_strdup_printf("Problem %s deleted!\n", url[2]);
+
 
     /*
      * Print out details about selected problem.
@@ -404,7 +404,7 @@ int generate_response(const struct http_req *request, struct http_resp *response
  */
 gchar* fill_crash_details(const char* dir_name, const content_type format)
 {
-    crash_data_t *crash_data;
+    problem_data_t *crash_data;
     xmlNodePtr root         = NULL;
     xmlDocPtr doc           = NULL;
     xmlNodePtr action       = NULL;
@@ -427,7 +427,7 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
             return NULL;
         }
         
-        crash_data = create_crash_data_from_dump_dir(dd);
+        crash_data = create_problem_data_from_dump_dir(dd);
         dd_close(dd);
         closedir(dir);
         
@@ -496,7 +496,7 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
  * @param item          Content and type of the crash detail.
  * @param content       String we'll append detail to.
  */
-void add_detail_html(const gchar* key, const crash_item* item, GString *content)
+void add_detail_html(const gchar* key, const struct problem_item* item, GString *content)
 {
     g_string_append(content,
                            "  <li class=\"problem\">\n<div>");
@@ -552,7 +552,7 @@ void add_detail_html(const gchar* key, const crash_item* item, GString *content)
  * @param item          Content and type of the crash detail.
  * @param root          Root node of an XML tree.
  */
-void add_detail_xml(const gchar *key, const crash_item *item, xmlNodePtr root)
+void add_detail_xml(const gchar *key, const struct problem_item *item, xmlNodePtr root)
 {
     xmlNodePtr node = NULL;
     xmlNodePtr text = NULL;
@@ -607,7 +607,7 @@ void add_detail_xml(const gchar *key, const crash_item *item, xmlNodePtr root)
  * @param item          Content and type of the crash detail.
  * @param content       String we'll append detail to.
  */
-void add_detail_plain(const gchar* key, const crash_item* item, GString* content)
+void add_detail_plain(const gchar* key, const struct problem_item* item, GString* content)
 {
     g_string_append_printf(content, "%s:\n %s\n\n", key, item->content);
 }
@@ -825,8 +825,8 @@ GList* create_list(GList *list, char* dir_name)
                 dd = dd_opendir(dump_dir_name, DD_OPEN_READONLY);
                 if ( dd != NULL ) {
                     problem_t *problem;
-                    reason = dd_load_text(dd, "reason");
-                    time = dd_load_text(dd, "time");
+                    reason = dd_load_text_ext(dd, "reason", DD_LOAD_TEXT_RETURN_NULL_ON_FAILURE);
+                    time = dd_load_text_ext(dd, "time", DD_LOAD_TEXT_RETURN_NULL_ON_FAILURE);
                     problem = g_try_malloc(sizeof(problem_t));
                     if ( problem == NULL ) {
                         //TODO

@@ -196,6 +196,25 @@ int init_u_socket(char *sock_name)
     return sockfd;
 }
 
+/**
+ * daemonize helper
+ *
+ * (Taken from abrtd.c)
+ */
+static void start_syslog_logging()
+{
+    /* Open stdin to /dev/null */
+    xmove_fd(xopen("/dev/null", O_RDWR), STDIN_FILENO);
+    /* We must not leave fds 0,1,2 closed.
+     * Otherwise fprintf(stderr) dumps messages into random fds, etc. */
+    xdup2(STDIN_FILENO, STDOUT_FILENO);
+    xdup2(STDIN_FILENO, STDERR_FILENO);
+    openlog("abrt-http", 0, LOG_DAEMON);
+    logmode = LOGMODE_SYSLOG;
+    putenv((char*)"ABRT_SYSLOG=1");
+}
+
+
 
 /**
  * Safer strcpy that dies on failure.
@@ -469,9 +488,7 @@ int main(int argc, char **argv)
         pid = fork();
         if ( pid == 0 ) {
             umask(0);
-            close(0); //stdin
-            close(1); //stdout
-            close(2); //stderr
+            start_syslog_logging();
             setsid();
             //syslog TODO
         } else if ( pid == -1 ) {

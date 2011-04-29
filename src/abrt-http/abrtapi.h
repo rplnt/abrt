@@ -17,6 +17,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <signal.h>
+#include <security/pam_appl.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,5 +102,8 @@ bool safe_strcpy(char* dest, const char* src, int max_len);
 bool delete_cr( gchar* in);
 /* remove trailing slashes */
 char *rm_slash(const char *path);
+
+/* PAM */
+struct passwd* basic_auth_pam(const char *user, const char *pass);
 
 #endif
