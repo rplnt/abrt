@@ -428,6 +428,7 @@ gchar* fill_crash_details(const char* dir_name, const content_type format)
         }
         
         crash_data = create_problem_data_from_dump_dir(dd);
+        sleep(8);
         dd_close(dd);
         closedir(dir);
         

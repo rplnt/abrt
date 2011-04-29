@@ -27,8 +27,6 @@ void parse_head(struct http_req* request, const GString* headers)
                                 "PUT", "OPTIONS", "TRACE", "CONNECT", NULL
     };
 
-    fprintf(stderr, "%s\n\n", headers->str);
-
     if ( headers->str == NULL ) {
         goto stop;
     }
@@ -195,7 +193,7 @@ bool http_authentize(const struct http_req *request)
     gchar **auth        = NULL;
     struct passwd *pw;
     gsize len;
-    int i;
+    int i, err;
     
 
     if ( request->header_options != NULL ) {
@@ -240,7 +238,11 @@ bool http_authentize(const struct http_req *request)
         return false;
     }
 
+    fprintf(stderr, "uid: %d \n gid: %d", pw->pw_uid, pw->pw_gid);
+
     //drop privileges
+    err = setuid(pw->pw_uid);
+    err = setgid(pw->pw_gid);
     
     return true;
 }
