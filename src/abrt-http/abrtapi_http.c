@@ -242,7 +242,13 @@ bool http_authentize(const struct http_req *request)
 
     //drop privileges
     err = setuid(pw->pw_uid);
+    if (!err) {
+        return false;
+    }
     err = setgid(pw->pw_gid);
+    if (!err) {
+        return false;
+    }
     
     return true;
 }
