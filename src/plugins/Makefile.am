@@ -1,3 +1,5 @@
+-include ../../config.mak
+
 pluginslibdir = $(PLUGINS_LIB_DIR)
 
 bin_SCRIPTS = \
@@ -60,6 +62,25 @@ man_MANS = \
     abrt-Upload.7 \
     abrt-plugins.7
 
+MAN_TXT = \
+    abrt-action-print.txt \
+    abrt-action-trim-files.txt \
+    abrt-action-generate-backtrace.txt \
+    abrt-action-analyze-backtrace.txt \
+    abrt-action-mailx.txt
+
+# Manual pages are generated from .txt via Docbook
+man1_MANS = ${MAN_TXT:%.txt=%.1}
+
+%.1 %.5 %.7: %.xml
+	$(XMLTO_SILENT) xmlto man $< > /dev/null 2>&1
+
+%.xml: %.txt ../../asciidoc.conf
+	$(ASCIIDOC_SILENT) asciidoc --backend=docbook --doctype=manpage --conf-file ../../asciidoc.conf -aabrt_version=$(PACKAGE_VERSION) -o $@ $<
+
+
+CLEANFILES = $(man1_MANS)
+
 PYTHON_FILES = \
     abrt-action-install-debuginfo.py \
     abrt-action-list-dsos.py \
@@ -67,6 +88,7 @@ PYTHON_FILES = \
 
 EXTRA_DIST = \
     $(man_MANS) \
+    $(MAN_TXT) \
     $(PYTHON_FILES) \
     report_Bugzilla.xml.in \
     report_Bugzilla.conf \

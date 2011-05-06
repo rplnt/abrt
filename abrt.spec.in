@@ -34,6 +34,8 @@ BuildRequires: intltool
 BuildRequires: libtool
 BuildRequires: nss-devel
 BuildRequires: texinfo
+BuildRequires: asciidoc
+BuildRequires: xmlto
 
 # for rhel6
 %if 0%{?rhel} >= 6
@@ -538,7 +540,7 @@ fi
 %{_initrddir}/abrt-ccpp
 %{_libexecdir}/abrt-hook-ccpp
 %{_bindir}/abrt-action-analyze-c
-%attr(4755, abrt, abrt) %{_bindir}/abrt-action-trim-files
+%{_bindir}/abrt-action-trim-files
 %attr(4755, abrt, abrt) %{_bindir}/abrt-action-install-debuginfo
 %{_bindir}/abrt-action-analyze-core.py*
 %{_bindir}/abrt-action-install-debuginfo.py*
@@ -550,6 +552,9 @@ fi
 %{_sysconfdir}/%{name}/events/reanalyze_LocalGDB.xml
 %{_sysconfdir}/%{name}/events/analyze_RetraceServer.xml
 %{_sysconfdir}/%{name}/events/reanalyze_RetraceServer.xml
+%{_mandir}/man*/abrt-action-trim-files.*
+%{_mandir}/man*/abrt-action-generate-backtrace.*
+%{_mandir}/man*/abrt-action-analyze-backtrace.*
 
 %files addon-kerneloops
 %defattr(-,root,root,-)
@@ -567,12 +572,14 @@ fi
 %{_sysconfdir}/%{name}/events/report_Logger.conf
 %{_mandir}/man7/abrt-Logger.7.gz
 %{_bindir}/abrt-action-print
+%{_mandir}/man*/abrt-action-print.*
 
 %files plugin-mailx
 %defattr(-,root,root,-)
 %{_sysconfdir}/%{name}/events/report_Mailx.xml
 %config(noreplace) %{_sysconfdir}/%{name}/events.d/mailx_events.conf
 %{_mandir}/man7/abrt-Mailx.7.gz
+%{_mandir}/man*/abrt-action-mailx.*
 %{_bindir}/abrt-action-mailx
 
 %files plugin-bugzilla
