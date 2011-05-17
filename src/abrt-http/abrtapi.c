@@ -342,43 +342,6 @@ void sigchld_handler(int sig)
 }
 
 
-void test() {
-    gchar *buff = (gchar*)"Hello\r\noption\noption2\n\nbody\r\nhell";
-    gchar *buffer = g_strdup(buff);
-    gchar *k;
-    int i = 0;
-    int p;
-    
-    while ( buffer[i] != '\0' ) {
-        printf("%d. %d = '%c'\n", i, (int)buffer[i], buffer[i]);
-        i++;
-    }
-    printf("\n-----\n");
-    
-    p = delete_cr(buffer);
-    
-
-    printf("\n-----\n");
-    printf("bstart: '%c' at %d", buffer[p], p);
-    printf("\n-----\n");
-    
-    i = 0;
-    while ( buffer[i] != '\0' ) {
-        printf("%d. %d = '%c'\n", i, (int)buffer[i], buffer[i]);
-        i++;
-    }
-
-    printf("\n");
-
-    k = g_strstr_len(buffer, -1, "\n\n");
-    printf("'%c'\n", (int)buffer[k-buffer]);
-
-    g_free(buffer);
-    
-    exit(1);
-    
-}
-
 
 /**
  * Main.
@@ -490,11 +453,11 @@ int main(int argc, char **argv)
             umask(0);
             start_syslog_logging();
             setsid();
-            //syslog TODO
+            clearenv();
         } else if ( pid == -1 ) {
             error_msg_and_die("Failed to daemonize\n");
         } else {
-            fprintf(stderr,"Process started with pid %d\n",pid);
+            fprintf(stderr,"Server started with pid %d\n",pid);
             exit(0); //parent's successful exit
         }
     }

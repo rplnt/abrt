@@ -240,6 +240,10 @@ void api_serve_static(const struct http_req *req, struct http_resp *resp)
     gchar *home = getenv("HOME");
     int ret;
 
+    if ( !home ) {
+        return;
+    }
+
     uri = rm_slash(req->uri);
     url = g_strsplit(uri, "/", -1);
 
@@ -534,9 +538,9 @@ void add_detail_html(const gchar* key, const struct problem_item* item, GString 
     /* something else */
     } else {
     g_string_append_printf(content,
-                           "<span class=\"unknown_tem\">%s</span><br/>", key);
+                           "<span class=\"unknown_item\">%s</span><br/>", key);
     g_string_append_printf(content,
-                           "<span class=\"unknown_tem\">%s</span>", item->content);
+                           "<span class=\"unknown_item\">%s</span>", item->content);
         
     }
 

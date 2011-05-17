@@ -240,14 +240,21 @@ bool http_authentize(const struct http_req *request)
 
     fprintf(stderr, "uid: %d \n gid: %d", pw->pw_uid, pw->pw_gid);
 
-    //drop privileges
-    err = setuid(pw->pw_uid);
-    if (err) {
+    err = setgid(pw->pw_gid);
+    if ( err == -1 ) {
+        fprintf(stderr, "setgid fail: %s\n", strerror(errno));
         return false;
     }
-    err = setgid(pw->pw_gid);
-    if (err) {
+    
+    //drop privileges
+    err = setuid(pw->pw_uid);
+    if ( err == -1 ) {
+        fprintf(stderr, "setuid fail\n");
         return false;
+    }
+
+    if ( pw->pw_dir ) {
+        setenv("HOME", pw->pw_dir, 1);
     }
     
     return true;
