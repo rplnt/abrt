@@ -459,7 +459,7 @@ int http_get_content_type(const struct http_req *request)
     gchar *pos;
     const gchar *types[] = {"application/xml", "text/plain",
                             "text/html", "application/json", NULL};
-    short ret = PREF_CONTENT_TYPE;
+    int ret = default_content_type;
     int i;
 
     if (request->header_options != NULL ) {

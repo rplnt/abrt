@@ -45,6 +45,7 @@
 /* globals */
 #define STATIC_PATH ".abrt/static"
 #define PREF_CONTENT_TYPE XML
+extern content_type default_content_type;
 //TODO set from config
 //prefered content type, css, ..
 

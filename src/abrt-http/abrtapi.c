@@ -1,10 +1,6 @@
 #include "abrtapi.h"
 
-
-void print_headers(gchar *key, gchar *value) {
-    fprintf(stderr, "%s: %s\n", key, value);
-}
-
+content_type default_content_type;
 
 /**
  * Serve request.
@@ -60,8 +56,8 @@ int serve(void* sock, int flags)
             c_len = has_body(&request);
 
             if ( c_len ) {
-                //TODO malloc body
-                // append rest of the (fixed) buffer at the beginning of a body
+                //if we want to read body some day - this will be the right place to begin
+                //malloc body append rest of the (fixed) buffer at the beginning of a body
                 //if clean buffer[1];
             } else {
                 break;
@@ -70,7 +66,7 @@ int serve(void* sock, int flags)
             
 
         } else if ( head == TRUE ) {
-            /* TODO
+            /* body-reading stuff
              * read body, check content-len
              * save body to request
              */
@@ -123,7 +119,10 @@ int serve(void* sock, int flags)
     free_http_request(&request);
     free_http_response(&response);
 
-    return rt;
+    //rt contains positive integer if keep-alive connection was requested
+    //for now we ignore it.
+    //TODO create timeout for listen
+    return 0;
 }
 
 
@@ -351,7 +350,7 @@ void sigchld_handler(int sig)
 int main(int argc, char **argv)
 {
 //     test();
-    int flags=0; //config flags
+    int flags=0, verbosity=0; //config flags
     char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket
     int sockfd_in; //new connection
@@ -365,6 +364,7 @@ int main(int argc, char **argv)
         /* name,            has_arg,         flag, val */
         { "help",           no_argument,        0, '?' },
         { "address",        required_argument,  0, 'a' },
+        { "verbose",        no_argument,        0, 'v' },
         { "config-file",    required_argument,  0, 'x' },
         { "debug",          no_argument,        0, 'd' },
         { "ssl",            required_argument,  0, 'e' },
@@ -397,6 +397,9 @@ int main(int argc, char **argv)
             case 'd':
                 flags |= OPT_DBG;
                 break;
+            case 'v':
+                verbosity++;
+                break;
             default: /* case: '?' */
                 usage_and_exit();
         }
@@ -404,6 +407,7 @@ int main(int argc, char **argv)
 
 
     /* check and supply other settings */
+    default_content_type = XML;
     if ( flags & OPT_CFG ) {
         //TODO load configuration if needed
         /*
@@ -470,8 +474,6 @@ int main(int argc, char **argv)
     if ( sigaction(SIGCHLD, &sa, NULL) == -1 ) {
         error_msg_and_die("Sigaction fail\n");
     }
-    //TODO handle more interrupts (close sockets, ...) ?
-    
     
     /* main "server" loop */
     while (1) {
@@ -497,7 +499,7 @@ int main(int argc, char **argv)
         /* decide if we're forked process */
         if ( pid == 0 ) {
             if ( close(sockfd) < 0 ) {
-                //log errno
+                //TODO log errno
             }
 
             if ( flags & OPT_SSL ) {

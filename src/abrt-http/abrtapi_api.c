@@ -326,9 +326,6 @@ int generate_response(const struct http_req *request, struct http_resp *response
         return rt;
     }
 
-    //fprintf(stderr,"URL: %s\nMethod: %d\n\n",request->uri, request->method);
-    fflush(stderr);
-
     response->format = http_get_content_type(request);
 
     switch ( request->method ) {
@@ -839,8 +836,8 @@ GList* create_list(GList *list, char* dir_name)
                         //return NULL; //can't - would lost list :/
                     }
                     problem->id = g_strdup(dent->d_name);
-                    problem->reason = reason;
-                    problem->time = time;
+                    problem->reason = reason==NULL?g_strdup("unknown"):reason;
+                    problem->time = time==NULL?g_strdup("unknown"):time;
 
                     list = g_list_append(list, problem);
 
