@@ -350,7 +350,7 @@ void sigchld_handler(int sig)
 int main(int argc, char **argv)
 {
     bool err;
-    int flags=0, verbosity=0; //config flags
+    int flags=0, verbosity=1; //config flags
     char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket
     int sockfd_in; //new connection
@@ -380,7 +380,7 @@ int main(int argc, char **argv)
     while (1) {
         int opt;
 
-        if ( (opt=getopt_long(argc, argv, "a:x:de:?", longopts, NULL)) == -1 ) {
+        if ( (opt=getopt_long(argc, argv, "a:x:vde:?", longopts, NULL)) == -1 ) {
             break;
         }
 
@@ -411,7 +411,8 @@ int main(int argc, char **argv)
 
     //FIXME ?
     //logmode = MIN(verbosity, 3);
-    
+
+    /* load config file */
     if ( flags & OPT_CFG ) {
         err = load_conf_file(config_path, settings, 1);
     } else {
@@ -422,7 +423,7 @@ int main(int argc, char **argv)
         error_msg_and_die("Couldn't not load config file.\n");
     }
 
-
+    /* if no address was specified from command line read it from config */
     if ( !(flags & OPT_ADDR) ) {
         option = g_hash_table_lookup(settings, "ListenAddress");
         if ( option ) {
@@ -441,7 +442,7 @@ int main(int argc, char **argv)
         }
     }
 
-    //read cert and key file paths
+    /* load key and cert files if SSL is enabled */
     if ( flags & OPT_SSL ) {
         option = g_hash_table_lookup(settings, "KeyPath");
         if ( option ) {
@@ -458,7 +459,7 @@ int main(int argc, char **argv)
         }
     }
 
-    //read default content type. if none is specified default to PREF..
+    /* load default content type or default to PREF_CONTENT_TYPE */
     option = g_hash_table_lookup(settings, "DefaultContentType");
     if ( option ) {
         if        ( g_strcmp0(option, "XML") == 0 ) {
