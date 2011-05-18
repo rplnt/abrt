@@ -46,8 +46,7 @@
 #define STATIC_PATH ".abrt/static"
 #define PREF_CONTENT_TYPE XML
 extern content_type default_content_type;
-//TODO set from config
-//prefered content type, css, ..
+
 
 /* options */
 #define OPT_DBG (1U) //don't daemonize and print errors
@@ -64,15 +63,15 @@ extern content_type default_content_type;
 
 //TODO
 /* should be in makefile ? */
-#define CONFIG_PATH "/etc/abrt/api.conf" //path to config file
+#define CONFIG_PATH "/etc/abrt/abrt-http.conf" //path to config file
 #define BACKLOG (16) //maximum number of connection
-#define INPUT_LEN (128) //maximum length of url/path input
+#define INPUT_LEN (128) //maximum length of input
 #define PORT_LEN (16) //maximum length of port/service
 #define READ_BUF (2*1024) //read from socket at once == max header size
 
 /* should be in config file */
-#define CERT_FILE "/home/rplnt/projects/certs/cacert.pem"
-#define KEY_FILE "/home/rplnt/projects/certs/privkey.pem"
+//#define CERT_FILE "/home/rplnt/projects/certs/cacert.pem"
+//#define KEY_FILE "/home/rplnt/projects/certs/privkey.pem"
 //TODO
 
 /* initialize "classic" socket */

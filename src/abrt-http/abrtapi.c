@@ -218,7 +218,7 @@ static void start_syslog_logging()
 /**
  * Safer strcpy that dies on failure.
  *
- * Use only for address parsing.
+ * Use only for input parsing.
  *
  * @param dest      Destination string.
  * @param src       Source string.
@@ -349,13 +349,17 @@ void sigchld_handler(int sig)
  */
 int main(int argc, char **argv)
 {
-//     test();
+    bool err;
     int flags=0, verbosity=0; //config flags
     char port[PORT_LEN+1]; //getaddrinfo accepts "string"
     int sockfd; //listening socket
     int sockfd_in; //new connection
     char listen_addr[INPUT_LEN+1]; //used for both types of sockets
     char config_path[INPUT_LEN+1];
+    char key_path[INPUT_LEN+1];
+    char cert_path[INPUT_LEN+1];
+    gchar *option;
+    map_string_h *settings = new_map_string();
     pid_t pid;
     SSL_CTX *ctx;
     struct sigaction sa;
@@ -405,20 +409,75 @@ int main(int argc, char **argv)
         }
     }
 
-
-    /* check and supply other settings */
-    default_content_type = XML;
+    //FIXME ?
+    //logmode = MIN(verbosity, 3);
+    
     if ( flags & OPT_CFG ) {
-        //TODO load configuration if needed
-        /*
-         * cert file
-         * key file
-         * sock name
-         * listening address (INADDR_ANY)
-         * listening port
-         * mode unix/net
-         */
+        err = load_conf_file(config_path, settings, 1);
+    } else {
+        err = load_conf_file(CONFIG_PATH, settings, 1);
     }
+
+    if (!err) {
+        error_msg_and_die("Couldn't not load config file.\n");
+    }
+
+
+    if ( !(flags & OPT_ADDR) ) {
+        option = g_hash_table_lookup(settings, "ListenAddress");
+        if ( option ) {
+            flags |= parse_addr_input(option, listen_addr, port);
+        } else {
+            error_msg_and_die("No listening address specified.\n");
+        }
+
+        option = g_hash_table_lookup(settings, "Encryption");
+        if ( option ) {
+            if ( g_strcmp0(option, "no") != 0 ) {
+                flags |= OPT_SSL;
+            }
+        } else {
+            flags |= OPT_SSL;
+        }
+    }
+
+    //read cert and key file paths
+    if ( flags & OPT_SSL ) {
+        option = g_hash_table_lookup(settings, "KeyPath");
+        if ( option ) {
+            safe_strcpy(key_path, option, INPUT_LEN);
+        } else {
+            error_msg_and_die("No Key File specified.\n");
+        }
+
+        option = g_hash_table_lookup(settings, "CertPath");
+        if ( option ) {
+            safe_strcpy(cert_path, option, INPUT_LEN);
+        } else {
+            error_msg_and_die("No Cert File specified.\n");
+        }
+    }
+
+    //read default content type. if none is specified default to PREF..
+    option = g_hash_table_lookup(settings, "DefaultContentType");
+    if ( option ) {
+        if        ( g_strcmp0(option, "XML") == 0 ) {
+            default_content_type = XML;
+        } else if ( g_strcmp0(option, "JSON") == 0 ) {
+            default_content_type = JSON;
+        } else if ( g_strcmp0(option, "HTML") == 0 ) {
+            default_content_type = HTML;
+        } else if ( g_strcmp0(option, "PLAIN") == 0 ) {
+            default_content_type = PLAIN;
+        } else {
+            error_msg_and_die("Invalid content-type specified in config file.\n");
+        }
+    } else {
+        default_content_type = PREF_CONTENT_TYPE;
+    }
+
+    //settings are not needed anymore
+    free_map_string(settings);
 
 
     /* prepare socket */
@@ -431,8 +490,8 @@ int main(int argc, char **argv)
     /* append ssl */
     if ( flags & OPT_SSL ) {
         ctx = init_ssl_context();
-        if ( SSL_CTX_use_certificate_file(ctx, CERT_FILE, SSL_FILETYPE_PEM) <= 0 ||
-            SSL_CTX_use_PrivateKey_file(ctx, KEY_FILE, SSL_FILETYPE_PEM) <= 0 ) {
+        if ( SSL_CTX_use_certificate_file(ctx, cert_path, SSL_FILETYPE_PEM) <= 0 ||
+            SSL_CTX_use_PrivateKey_file(ctx, key_path, SSL_FILETYPE_PEM) <= 0 ) {
             ERR_print_errors_fp(stderr);
             error_msg_and_die("SSL certificates err\n");
         }
