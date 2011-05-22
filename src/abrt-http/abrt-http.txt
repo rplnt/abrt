@@ -1,0 +1,47 @@
+abrt-http(1)
+============
+
+NAME
+----
+abrt-http - Daemon providing API to control abrt over HTTP.
+
+
+SYNOPSIS
+--------
+'abrt-http' [option]
+
+DESCRIPTION
+-----------
+The program listens on specified address and port or on unix socket.
+Incoming connections must authentize with system username
+and password using HTTP Basic Authentication. Authentized users
+can list problems, view detailed information of problems, download
+memory dumps and delete problems. Responses are returned in format
+specified in HTTP headers. Supported formats at the moment are
+XML, HTML and plain text.
+
+OPTIONS
+-------
+The options can be given in any order.
+-v::
+    Be more verbose.
+-x FILE::
+    Config file to use instead of the default one.
+-a ADDRESS:PORT/PATH::
+    Start server on address:port or on unix socket on given path.
+    Address can be IPv4 or IPv6. Connection won't be secure.
+-e ADDRESS:PORT/PATH::
+    Same as above but use SSL.
+-d::
+    Debug mode. Don't daemonize.
+-?::
+    Print usage and exit.
+
+FILES
+-----
+/etc/abrt/abrt-http.conf::
+    Default config file. For details on how to configure it, visit it.
+~/abrt/static/style.css::
+    Stylesheet to be used with HTML output.
+/etc/pam/abrt-http::
+    File containing PAM rules for abrt-http.
