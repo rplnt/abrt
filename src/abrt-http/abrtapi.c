@@ -120,6 +120,9 @@ int serve(void* sock, int flags)
     free_http_response(&response);
 
     //rt contains positive integer if keep-alive connection was requested
+    if ( rt > 0 ) {
+        rt = 0;
+    }
     //for now we ignore it.
     //TODO create timeout for listen
     return 0;
@@ -335,10 +338,14 @@ void usage_and_exit()
 /**
  * Child handlers that prevents creating zombies.
  */
-void sigchld_handler(int sig)
+void sigchld_handler(int sig) 
 {
-    waitpid(0, NULL, WNOHANG);
-}
+     int errno_save = errno;
+     while( waitpid(-1, NULL, WNOHANG) > 0 ) {
+         continue;
+     }
+     errno = errno_save;
+ }
 
 
 
