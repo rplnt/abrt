@@ -1,0 +1,2 @@
+The abrt-http is an daemon providing rest api via the http for the abrt project. It can list problems catched by the abrt daemon, show details of selected problems and fetch crash dumps. At the moment it can respond using XML or HTML.
+Security is provided by the SSL, using OpenSSL implementation. Authorization is done using basic http authentication and PAM.
